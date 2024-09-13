@@ -4,26 +4,33 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
 const { body, validationResult } = require('express-validator');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000', // or whatever your frontend URL is
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // Middleware for JWT authentication
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
+  const token = req.cookies.token;
   if (token == null) return res.sendStatus(401);
-
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.sendStatus(403);
     req.user = user;
     next();
   });
 };
+
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({ message: 'Backend is healthy' });
+});
 
 // Patient routes
 app.get('/api/patients', authenticateToken, async (req, res) => {
@@ -132,37 +139,41 @@ app.post('/api/register', [
     }
   });
 
-  app.post('/api/login', [
-    body('Username').notEmpty().withMessage('Username is required'),
-    body('Password').notEmpty().withMessage('Password is required')
-  ], async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-  
-    const { Username, Password } = req.body;
-    try {
-      const result = await db.query('SELECT * FROM UserAccounts WHERE Username = $1', [Username]);
-      if (result.rows.length > 0) {
-        const user = result.rows[0];
-        if (await bcrypt.compare(Password, user.passwordhash)) {
-          const token = jwt.sign({ UserID: user.userid, Username: user.username, Role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-          res.json({ token, role: user.role });
-        } else {
-          res.status(401).json({ error: 'Invalid credentials' });
-        }
+app.post('/api/login', [
+  body('Username').notEmpty().withMessage('Username is required'),
+  body('Password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { Username, Password } = req.body;
+  try {
+    const result = await db.query('SELECT * FROM UserAccounts WHERE Username = $1', [Username]);
+    if (result.rows.length > 0) {
+      const user = result.rows[0];
+      if (await bcrypt.compare(Password, user.passwordhash)) {
+        const token = jwt.sign({ UserID: user.userid, Username: user.username, Role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        
+        res.cookie('token', token, { 
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+          sameSite: 'strict',
+          maxAge: 3600000 // 1 hour
+        });
+        
+        res.json({ message: 'Login successful', role: user.role });
       } else {
         res.status(401).json({ error: 'Invalid credentials' });
       }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error', details: err.message });
+    } else {
+      res.status(401).json({ error: 'Invalid credentials' });
     }
-  });
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
 });
 
 // Update a patient
@@ -197,223 +208,116 @@ app.put('/api/patients/:id', [
     }
   });
   
-  // Delete a patient
-  app.delete('/api/patients/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await db.query('DELETE FROM Patients WHERE PatientID = $1 RETURNING *', [id]);
-      if (result.rows.length > 0) {
-        res.json({ message: 'Patient deleted successfully' });
-      } else {
-        res.status(404).json({ error: 'Patient not found' });
-      }
-    } catch (err) {
-      console.error(err);
-      if (err.code === '23503') { // foreign_key_violation
-        res.status(400).json({ error: 'Cannot delete patient. There are related records.' });
-      } else {
-        res.status(500).json({ error: 'Internal server error', details: err.message });
-      }
+// Delete a patient
+app.delete('/api/patients/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query('DELETE FROM Patients WHERE PatientID = $1 RETURNING *', [id]);
+    if (result.rows.length > 0) {
+      res.json({ message: 'Patient deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Patient not found' });
     }
-  });
-
-
-  // Get all medical records
-app.get('/api/medical-records', authenticateToken, async (req, res) => {
-    try {
-      const result = await db.query('SELECT * FROM MedicalRecords');
-      res.json(result.rows);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-  
-
-  // Create a new medical record
-app.post('/api/medical-records', [
-    body('PatientID').isInt().withMessage('Patient ID must be an integer'),
-    body('DoctorID').isInt().withMessage('Doctor ID must be an integer'),
-    body('VisitDate').isDate().withMessage('Visit date must be a valid date'),
-    body('Diagnosis').notEmpty().withMessage('Diagnosis is required'),
-    body('Treatment').notEmpty().withMessage('Treatment is required'),
-  ], authenticateToken, async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-  
-    const { PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes } = req.body;
-    try {
-      const result = await db.query(
-        'INSERT INTO MedicalRecords (PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes]
-      );
-      res.status(201).json(result.rows[0]);
-    } catch (err) {
-      console.error(err);
-      if (err.code === '23503') { // foreign_key_violation
-        res.status(400).json({ error: 'Invalid PatientID or DoctorID' });
-      } else {
-        res.status(500).json({ error: 'Internal server error', details: err.message });
-      }
-    }
-  });
-  
-  // Update a medical record
-app.put('/api/medical-records/:id', [
-    body('PatientID').isInt().withMessage('Patient ID must be an integer'),
-    body('DoctorID').isInt().withMessage('Doctor ID must be an integer'),
-    body('VisitDate').isDate().withMessage('Visit date must be a valid date'),
-    body('Diagnosis').notEmpty().withMessage('Diagnosis is required'),
-    body('Treatment').notEmpty().withMessage('Treatment is required'),
-  ], authenticateToken, async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-  
-    const { id } = req.params;
-    const { PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes } = req.body;
-    try {
-      const result = await db.query(
-        'UPDATE MedicalRecords SET PatientID = $1, DoctorID = $2, VisitDate = $3, Diagnosis = $4, Treatment = $5, Notes = $6 WHERE RecordID = $7 RETURNING *',
-        [PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes, id]
-      );
-      if (result.rows.length > 0) {
-        res.json(result.rows[0]);
-      } else {
-        res.status(404).json({ error: 'Medical record not found' });
-      }
-    } catch (err) {
-      console.error(err);
-      if (err.code === '23503') { // foreign_key_violation
-        res.status(400).json({ error: 'Invalid PatientID or DoctorID' });
-      } else {
-        res.status(500).json({ error: 'Internal server error', details: err.message });
-      }
-    }
-  });
-  
-  // Delete a medical record
-  app.delete('/api/medical-records/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await db.query('DELETE FROM MedicalRecords WHERE RecordID = $1 RETURNING *', [id]);
-      if (result.rows.length > 0) {
-        res.json({ message: 'Medical record deleted successfully' });
-      } else {
-        res.status(404).json({ error: 'Medical record not found' });
-      }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // Get access permissions for a patient
-app.get('/api/access-permissions/:patientId', authenticateToken, async (req, res) => {
-    const { patientId } = req.params;
-    try {
-      const result = await db.query('SELECT * FROM PatientControlledAccess WHERE PatientID = $1', [patientId]);
-      res.json(result.rows);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-  
- // Set access permission for a patient
-app.post('/api/access-permissions', [
-    body('PatientID').isInt().withMessage('Patient ID must be an integer'),
-    body('UserID').isInt().withMessage('User ID must be an integer'),
-    body('AccessLevel').isIn(['read', 'write']).withMessage('Access level must be read or write'),
-    body('EffectiveDate').isDate().withMessage('Effective date must be a valid date'),
-    body('ExpirationDate').isDate().withMessage('Expiration date must be a valid date')
-  ], authenticateToken, async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-  
-    const { PatientID, UserID, AccessLevel, EffectiveDate, ExpirationDate } = req.body;
-    try {
-      const result = await db.query(
-        'INSERT INTO PatientControlledAccess (PatientID, UserID, AccessLevel, EffectiveDate, ExpirationDate) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [PatientID, UserID, AccessLevel, EffectiveDate, ExpirationDate]
-      );
-      res.status(201).json(result.rows[0]);
-    } catch (err) {
-      console.error(err);
-      if (err.code === '23503') { // foreign_key_violation
-        res.status(400).json({ error: 'Invalid PatientID or UserID' });
-      } else {
-        res.status(500).json({ error: 'Internal server error', details: err.message });
-      }
-    }
-  });
-  
-  // Update access permission
-  app.put('/api/access-permissions/:id', [
-    body('AccessLevel').isIn(['read', 'write']).withMessage('Access level must be read or write'),
-    body('EffectiveDate').isDate().withMessage('Effective date must be a valid date'),
-    body('ExpirationDate').isDate().withMessage('Expiration date must be a valid date')
-  ], authenticateToken, async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-  
-    const { id } = req.params;
-    const { AccessLevel, EffectiveDate, ExpirationDate } = req.body;
-    try {
-      const result = await db.query(
-        'UPDATE PatientControlledAccess SET AccessLevel = $1, EffectiveDate = $2, ExpirationDate = $3 WHERE AccessID = $4 RETURNING *',
-        [AccessLevel, EffectiveDate, ExpirationDate, id]
-      );
-      if (result.rows.length > 0) {
-        res.json(result.rows[0]);
-      } else {
-        res.status(404).json({ error: 'Access permission not found' });
-      }
-    } catch (err) {
-      console.error(err);
+  } catch (err) {
+    console.error(err);
+    if (err.code === '23503') { // foreign_key_violation
+      res.status(400).json({ error: 'Cannot delete patient. There are related records.' });
+    } else {
       res.status(500).json({ error: 'Internal server error', details: err.message });
     }
-  });
-  
-  // Update access permission
-  app.put('/api/access-permissions/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    const { AccessLevel, EffectiveDate, ExpirationDate } = req.body;
-    try {
-      const result = await db.query(
-        'UPDATE PatientControlledAccess SET AccessLevel = $1, EffectiveDate = $2, ExpirationDate = $3 WHERE AccessID = $4 RETURNING *',
-        [AccessLevel, EffectiveDate, ExpirationDate, id]
-      );
-      if (result.rows.length > 0) {
-        res.json(result.rows[0]);
-      } else {
-        res.status(404).json({ error: 'Access permission not found' });
-      }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get all medical records
+app.get('/api/medical-records', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM MedicalRecords');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create a new medical record
+app.post('/api/medical-records', [
+  body('PatientID').isInt().withMessage('Patient ID must be an integer'),
+  body('DoctorID').isInt().withMessage('Doctor ID must be an integer'),
+  body('VisitDate').isDate().withMessage('Visit date must be a valid date'),
+  body('Diagnosis').notEmpty().withMessage('Diagnosis is required'),
+  body('Treatment').notEmpty().withMessage('Treatment is required'),
+], authenticateToken, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes } = req.body;
+  try {
+    const result = await db.query(
+      'INSERT INTO MedicalRecords (PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    if (err.code === '23503') { // foreign_key_violation
+      res.status(400).json({ error: 'Invalid PatientID or DoctorID' });
+    } else {
+      res.status(500).json({ error: 'Internal server error', details: err.message });
     }
-  });
-  
-  // Delete access permission
-  app.delete('/api/access-permissions/:id', authenticateToken, async (req, res) => {
-    const { id } = req.params;
-    try {
-      const result = await db.query('DELETE FROM PatientControlledAccess WHERE AccessID = $1 RETURNING *', [id]);
-      if (result.rows.length > 0) {
-        res.json({ message: 'Access permission deleted successfully' });
-      } else {
-        res.status(404).json({ error: 'Access permission not found' });
-      }
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update a medical record
+app.put('/api/medical-records/:id', [
+  body('PatientID').isInt().withMessage('Patient ID must be an integer'),
+  body('DoctorID').isInt().withMessage('Doctor ID must be an integer'),
+  body('VisitDate').isDate().withMessage('Visit date must be a valid date'),
+  body('Diagnosis').notEmpty().withMessage('Diagnosis is required'),
+  body('Treatment').notEmpty().withMessage('Treatment is required'),
+], authenticateToken, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { id } = req.params;
+  const { PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes } = req.body;
+  try {
+    const result = await db.query(
+      'UPDATE MedicalRecords SET PatientID = $1, DoctorID = $2, VisitDate = $3, Diagnosis = $4, Treatment = $5, Notes = $6 WHERE RecordID = $7 RETURNING *',
+      [PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes, id]
+    );
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.status(404).json({ error: 'Medical record not found' });
     }
-  });
+  } catch (err) {
+    console.error(err);
+    if (err.code === '23503') { // foreign_key_violation
+      res.status(400).json({ error: 'Invalid PatientID or DoctorID' });
+    } else {
+      res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+  }
+});
+
+// Delete a medical record
+app.delete('/api/medical-records/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query('DELETE FROM MedicalRecords WHERE RecordID = $1 RETURNING *', [id]);
+    if (result.rows.length > 0) {
+      res.json({ message: 'Medical record deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Medical record not found' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+//
