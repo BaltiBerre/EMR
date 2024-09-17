@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3000'; // Update this if your backend URL is different
+const API_URL = '';  // Empty string, as we're using proxy
 
-axios.defaults.withCredentials = true; // This ensures cookies are sent with requests
-
-const PatientList = () => {
+function PatientList() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,20 +11,34 @@ const PatientList = () => {
   useEffect(() => {
     const fetchPatients = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/patients`);
+        const token = localStorage.getItem('token');
+        console.log('Token:', token); // Add this line
+        const response = await axios.get(`${API_URL}/api/patients`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('Patient data:', response.data); 
         setPatients(response.data);
         setLoading(false);
       } catch (err) {
-        setError('Failed to fetch patients');
-        setLoading(false);
         console.error('Error fetching patients:', err);
+        if (err.response) {
+          console.error('Response data:', err.response.data);
+          console.error('Response status:', err.response.status);
+          console.error('Response headers:', err.response.headers);
+        } else if (err.request) {
+          console.error('Request:', err.request);
+        } else {
+          console.error('Error message:', err.message);
+        }
+        setError('Failed to fetch patients. Please try again later.');
+        setLoading(false);
       }
     };
 
     fetchPatients();
   }, []);
 
-  if (loading) return <div>Loading patients...</div>;
+  if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -45,6 +57,6 @@ const PatientList = () => {
       )}
     </div>
   );
-};
+}
 
 export default PatientList;
