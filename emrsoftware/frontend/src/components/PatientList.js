@@ -115,7 +115,7 @@ function PatientList() {
   return (
     <div className="bg-white rounded-lg shadow-lg">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold">Patient Management</h2>
+        <h2 className="text-2xl font-bold">Patient Management</h2>
       </div>
       <div className="p-6">
         {/* Patient Form */}

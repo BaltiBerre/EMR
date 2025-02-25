@@ -6,25 +6,32 @@ import { Calendar, Clock, FileText, User, AlertCircle } from 'lucide-react';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 const PatientDashboard = () => {
+  // initialises appointments and medicalrecords, inputs an empty array object 
   const [appointments, setAppointments] = useState([]);
   const [medicalRecords, setMedicalRecords] = useState([]);
+  // initialises the loading status to true
   const [loading, setLoading] = useState(true);
+  // error state null
   const [error, setError] = useState(null);
 
+  // calls the function which retrieves the backend data
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
+  // fetches data from backend, async so to not crash immediately and lets know that there's wait time
   const fetchDashboardData = async () => {
     try {
+      // retrieves token from the local storage
       const token = localStorage.getItem('token');
-      
+      // error case for token not being there
       if (!token) {
         setError('No authentication token found');
         setLoading(false);
         return;
       }
 
+      // creating a bearer token 
       const headers = { 
         Authorization: `Bearer ${token}`
       };
@@ -37,7 +44,11 @@ const PatientDashboard = () => {
       const recordsResponse = await axios.get(`${API_URL}/api/medical-records`, { headers });
       setMedicalRecords(recordsResponse.data || []);
 
+      // sets the loading to false
       setLoading(false);
+
+      // if any error arises logs it to the console
+      // and 
     } catch (err) {
       console.error('Dashboard fetch error:', err);
       setError('Failed to load dashboard data. Please try again.');
@@ -71,8 +82,7 @@ const PatientDashboard = () => {
             </div>
             <button 
               onClick={fetchDashboardData}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
               Retry
             </button>
           </div>

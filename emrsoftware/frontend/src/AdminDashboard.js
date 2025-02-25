@@ -4,8 +4,11 @@ import { Activity, LogOut, Plus } from 'lucide-react';
 import PatientList from './components/PatientList';
 import PatientOverview from './components/PatientOverview';
 import DoctorList from './components/doctorList';
+import AccountManagement from './admin/AccountManagement';
+
 
 function AdminDashboard() {
+  // initialises the activeTab state variable to patients-list
   const [activeTab, setActiveTab] = useState('patients-list');
 
   return (
@@ -23,10 +26,6 @@ function AdminDashboard() {
                 <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
                 Backend Status: Healthy
               </div>
-              <button className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </button>
             </div>
           </div>
         </div>
@@ -65,6 +64,16 @@ function AdminDashboard() {
           >
             Doctors
           </button>
+          <button
+            className={`px-6 py-3 font-medium ${
+              activeTab == 'account-management'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+            }`}
+            onClick={() => setActiveTab('account-management')}
+            >
+              Account Management
+            </button>
         </div>
 
         {/* Content Area */}
@@ -72,6 +81,7 @@ function AdminDashboard() {
           {activeTab === 'patients-overview' && <PatientOverview />}
           {activeTab === 'patients-list' && <PatientList />}
           {activeTab === 'doctors' && <DoctorList />}
+          {activeTab === 'account-management' && <AccountManagement />}
         </div>
       </main>
     </div>

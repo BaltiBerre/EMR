@@ -5,6 +5,7 @@ import axios from 'axios';
 const API_URL = ''; // Empty string, as we're using proxy
 
 function PatientOverview() {
+  // initialises an object with multiple properties
   const [overview, setOverview] = useState({
     totalPatients: 0,
     recentAppointments: [],
@@ -12,13 +13,17 @@ function PatientOverview() {
     appointmentsTrend: [],
     ageDistribution: []
   });
+  // initialises loading to true, error to null
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Calls the sideeffect function fetchOverview()
   useEffect(() => {
     fetchOverview();
   }, []);
 
+
+  
   const fetchOverview = async () => {
     try {
       const token = localStorage.getItem('token');
