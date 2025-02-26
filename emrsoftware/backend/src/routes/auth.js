@@ -7,15 +7,16 @@ const jwt = require('jsonwebtoken');                     // JSON Web Token libra
 const { body, validationResult } = require('express-validator');  // Request validation
 const { pool } = require('../config/database');          // Database connection pool
 
-// POST /auth/register
+// POST /auth/register  
 // Register a new user account
 router.post('/register', [
   // Validation middleware
   body('Username').isLength({ min: 3 }).withMessage('Username must be at least 3 characters long'),
-  body('Password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
-  body('Role').isIn(['patient', 'doctor', 'admin']).withMessage('Invalid role')
+  body('Password').isLength({ min: 4 }).withMessage('Password must be at least 8 characters long'),
+  body('Role').isIn(['Admin', 'Doctor', 'Patient', 'Staff']).withMessage('Invalid role')
 ], async (req, res) => {
   // Check for validation errors
+  console.log("Register request body:", req.body); // Log the incoming request
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
