@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');          // Database connection
 const authenticateToken = require('../middleware/auth'); // JWT authentication
+const { body, validationResult } = require('express-validator');
+
 
 // GET /doctors
 // Get all doctors with their patient and appointment statistics
@@ -114,6 +116,83 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error fetching doctor details', error: error.message });
   }
 });
+// POST /doctors
+// Create new Doctor Record
+router.post('/', [
+  body('firstname').trim().notEmpty().withMessage("Needs a first name bro"),
+  body('lastname').notEmpty().withMessage("Needs a last name too dawg"),
+  body('specialization').notEmpty().withMessage("Needs to have specialization"),
+  body('phonenumber').notEmpty().withMessage("Not valid phone number"),
+  body('email').isEmail().normalizeEmail().withMessage("Not a valid ")
+], authenticateToken, async (req, res) =>{
+  // Checks fo admin privileges
+  if (req.user.Role.toLowerCase() !== 'admin') {
+    return res.status(403).json({ message: "Access denied."})
+  }
+  // checks validation results
+   const errors = validationResult(req);
+   if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array()})
+   }
+
+
+    // Log request body for debugging
+    console.log("Request body:", req.body);
+
+   const {
+    firstname,
+    lastname,
+    specialization,
+    phonenumber,
+    email,
+    userid
+   } = req.body
+
+    // Check if required fields exist
+    if (!firstname || !lastname || !userid) {
+    return res.status(400).json({ message: "Missing required fields", 
+      required: ['firstname', 'lastname', 'userid'],
+      provided: Object.keys(req.body)
+    });
+  }
+  
+    // Check if table exists
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'doctors'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      return res.status(500).json({ message: "Doctors table does not exist" });
+    }
+
+   
+   try {
+    // tries to insert doctor record
+    const result = await pool.query(
+      'INSERT INTO Doctors (userid, firstname, lastname, specialization, phonenumber, email) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [userid, firstname, lastname, specialization, phonenumber, email]
+    );
+    
+    // Send success response with the created doctor data
+    return res.status(201).json(result.rows[0]);
+    
+   } catch (err) {
+    console.log("Error creating doctor record", err);
+    
+    // Check for specific error type
+    if (err.code === '23503') {
+      return res.status(400).json({message: 'Invalid UserID specified'});
+    }
+    
+    // General error (moved inside catch block and fixed variable name)
+    return res.status(500).json({message: "Failed to create doctor record", error: err.message});
+   }
+});
+
+
 
 // Export router for use in main application
 module.exports = router;
