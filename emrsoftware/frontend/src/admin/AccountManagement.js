@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as math from 'mathjs';
 import axios from 'axios';
 
 // defines the component
@@ -7,11 +8,11 @@ function AccountManagement() {
     const [newDoctor, setNewDoctor] = useState({
         username: '',
         password: '',
-        firstName: '',
+        firstname: '',
         lastName: '',
         specialization: '',
         email: '',
-        phoneNumber: ''
+        phonenumber: ''
     })
     // initialising state variables to track
     const [doctors, setDoctors] = useState([])
@@ -24,30 +25,33 @@ function AccountManagement() {
     const [selectedPatient, setSelectedPatient] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-
+    const [isModifyMode, setIsModifyMode] = useState(false)
+    const [showDoctorForm, setShowDoctorForm] = useState(false);
     const API_URL = process.env.REACT_APP_API_URL || '';
-
+    const patientsPerPage = 10;
+    const [currentPage, setCurrentPage] = useState(1);
 
 // Fetches the doctor every time that the selectedDoctor state variable changes
 useEffect( () => {
     setLoading(true)
-
-    const fetchData = async () => {
-        try {
-            // call both fetch functions
-            await fetchDoctors();
-            await fetchPatients();
-            console.log("YESSIR")
-            //set loading state to false
-            setLoading(false);
-        } catch (err) {
-            console.error('Error calling fetchDoctors(); and fetchPatients();');
-            setLoading(false);
-        }
-    };
-
     fetchData();
 }, [])
+
+// encompassing function that calls both fetchPatients() and fetchDoctors() 
+// also takes care of tracking the loading state
+const fetchData = async () => {
+    try {
+        // call both fetch functions
+        await fetchDoctors();
+        await fetchPatients();
+        console.log("YESSIR")
+        //set loading state to false
+        setLoading(false);
+    } catch (err) {
+        console.error('Error calling fetchDoctors(); and fetchPatients();');
+        setLoading(false);
+    }
+};
 
 const fetchDoctors = async () => {
     try {
@@ -58,7 +62,6 @@ const fetchDoctors = async () => {
             headers: { Authorization: `Bearer ${token}`}
         });
         setDoctors(response.data)
-        setLoading(false)
         console.log("Fetch Doctors worked")
     } catch (err) {
         console.error('Error fetching doctors', err);
@@ -74,18 +77,103 @@ const fetchPatients = async () => {
             headers: {Authorization: `Bearer ${token}`}
         });
         setPatients(response.data)
-        setLoading(false)
     } catch(err) {
         console.error('Error fetching patients', err)
         setError('Failed to load patients')
     }}
+
+
+    // form that handles doctor creation
+    // (e) because we're passing an event object in
+const handleCreateDoctor = async (e) => {
+    // stops browser from reloading the page
+    e.preventDefault()
+
+    try {
+        setLoading(true);
+        const token = localStorage.getItem('token')
+
+        // api call to create new doctor 
+        const userResponse = await axios.post(`${API_URL}/api/auth/register`, {
+            Username: newDoctor.username,
+            Password: newDoctor.password,
+            Role: 'Doctor'
+        }, {
+            headers: {Authorization: `Bearer ${token}` }
+        });
+        
+        // get the userid from the useraccounts table
+
+        const userid = userResponse.data.userid
+
+        // create the doctor record
+        await axios.post(`${API_URL}/api/doctors`, {
+            userid: userid,
+            firstname: newDoctor.firstname,
+            lastname: newDoctor.lastname,
+            specialization: newDoctor.specialization,
+            phonenumber: newDoctor.phonenumber,
+            email: newDoctor.email
+        }, {
+            headers: {Authorization: `Bearer ${token}`}
+        });
+
+        setNewDoctor({
+            username: '',
+            password: '',
+            firstname: '',
+            lastname: '',
+            specialization: '',
+            email: '',
+            phonenumber: ''
+        });
+
+
+        setShowDoctorForm(false);
+        await fetchDoctors(); // refresh
+        setLoading(false);
+        setError(null);
+        
+    } catch (err) {
+        console.error('Failed to create doc:', err);
+        setError('Failed to create new Doc account');
+        setLoading(false);
+    }
+} 
     return (
 
         // shows the user that the data is being fetched
         // this is saying if `loading` == true, show this
         <div className="bg-white rounded-lg shadow-lg">
-            <div className="p-6 border-b border-gray-200">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between w-full">
             <h2 className="text-2xl font-bold"> Account Management</h2>
+            
+            {/* UI functionality for adding doctors, on click shows add doctor and back button */}
+            {!isModifyMode ? (
+                <button
+                onClick={() => setIsModifyMode(true)}
+                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
+                >
+                    Modify
+                </button>
+            ): (
+                    // On click reveals add doctor and back button
+                <div className='flex space-x-2'>
+                    <button
+                        onClick={() => setIsModifyMode(false)}
+                        className='px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600'
+                    >
+                        Back
+                    </button>
+                    <button
+                    onClick={() => setShowDoctorForm(true)}
+                    className="text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-medium rounded-lg px-3 py-1.5 text-sm active:translate-y-1 transition-transform"
+                    >
+                    <span className="text-xl mr-1"> Add Doctor</span>
+                    </button>
+                </div>
+            )
+            }
             </div>
             <div className="p-6">
             {loading && (
@@ -100,8 +188,7 @@ const fetchPatients = async () => {
                     <p className="text-red-600">{error}</p>
                     <button onClick={() => {
                         setLoading(true);
-                        fetchDoctors();
-                        fetchPatients();
+                        fetchData();
                     }} 
                     className="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm">
                         Retry
@@ -128,26 +215,165 @@ const fetchPatients = async () => {
 
                 {/* Patient List */}
                 <div>
+                    <div className="flex justify-between items-center mb-4">
                     <h3 className="font-medium mb-4"> Patients ({patients.length})</h3>
+                                        {/* pagination controls */}
+                                        {patients.length > patientsPerPage && (
+                        // previous page
+                        <div className="flex justify-center gap-1 mt-0">
+                            {/* BACK BUTTON */}
+                            <button
+                            className="px-3 py-1 bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-0"
+                            // ensures that it never goes below 1
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            // disables clicking this button if on the very first page
+                            disabled={currentPage === 1}
+                            >
+                                
+                                ←
+                            </button>
+
+                            <span>
+                                {/* Calculates the amount of pages needed to fit all the patients */}
+                                Page {currentPage} of {Math.ceil(patients.length / patientsPerPage)}
+                            </span>
+                            {/* Forwards button */}
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, math.ceil(patients.length/patientsPerPage)))}
+                                disabled={currentPage === math.ceil(patients.length / patientsPerPage)}
+                                className='px-3 py-1 bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-0'
+                            >
+                                →
+                            </button>
+                        </div>
+                    )}
+                    </div>
                     <ul className="border rounded-lg divide-y"> 
-                        {/* map() applies itself to each element of */}
-                        {patients.map(patient => (
-                            <li key={patient.patientid} className="p-3 hover:bg-gray-50">
-                                {patient.firstname} {patient.lastname}
-                            </li>
-                        ))}
+                        {patients
+                            .slice((currentPage - 1) * patientsPerPage, currentPage * patientsPerPage)
+                            .map(patient =>(
+                                <li key={patient.patientid} className="p-3 hover:bg-gray-50">
+                                    {patient.firstname} {patient.lastname}
+                                </li>
+                            ))}
                         {patients.length === 0 && (
-                            <li className="p-3 text-gray-500"> No Patients Found</li>
+                            <li className='p-3 text-gray-500'> No Patients Found </li>
                         )}
-
-
-
                     </ul>
+
                 </div>
             </div>
         )}
 
             </div>
+        
+            {/* Doctor Form */}
+            {showDoctorForm && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md"> 
+                        <h3 className="text-xl font-bold mb-4"> Create New Doctor Account </h3>
+                        
+                        <form onSubmit={handleCreateDoctor}>
+                            <div className="grid grid-cols-0 space-y-4">
+
+                                {/* Username field */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> Username</label>
+                                    <input
+                                        type="text"
+                                        value={newDoctor.username}
+                                        onChange={(e) => setNewDoctor({...newDoctor, username: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                {/* Password Field */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> Password</label>
+                                    <input
+                                        type="password"
+                                        value={newDoctor.password}
+                                        onChange={(e) => setNewDoctor({...newDoctor, password: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                {/* First Name */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> First Name</label>
+                                    <input
+                                        type="text"
+                                        value={newDoctor.firstname}
+                                        onChange={(e) => setNewDoctor({...newDoctor, firstname: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                {/* Last Name */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> Last Name</label>
+                                    <input
+                                        type="text"
+                                        value={newDoctor.lastname}
+                                        onChange={(e) => setNewDoctor({...newDoctor, lastname: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                {/* Specialization */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> Specialization</label>
+                                    <input
+                                        type="text"
+                                        value={newDoctor.specialization}
+                                        onChange={(e) => setNewDoctor({...newDoctor, specialization: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                {/* phone number */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> Phone Number</label>
+                                    <input
+                                        type="text"
+                                        value={newDoctor.phonenumber}
+                                        onChange={(e) => setNewDoctor({...newDoctor, phonenumber: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                {/* email */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700"> Email </label>
+                                    <input
+                                        type="text"
+                                        value={newDoctor.email}
+                                        onChange={(e) => setNewDoctor({...newDoctor, email: e.target.value})}
+                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                                        required
+                                    />
+                                </div>
+                                
+                            </div>
+
+                            <div className="flex justify-end space-x-3 pt-4">
+                                <button
+                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
+                                    onClick={() => setShowDoctorForm(false)}
+                                    >
+                                        Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                                >
+                                    Create Account
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
