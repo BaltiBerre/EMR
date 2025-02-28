@@ -96,6 +96,38 @@ router.post('/login', [
   }
 });
 
+
+// DELETE /auth/users/:id
+// Delte a user account (requires admin)
+// DELETE /auth/users/:id
+// Delete a user account (requires admin privileges)
+router.delete('/users/:id', authenticateToken, async (req, res) => {
+  // Check authorization
+  if (req.user.Role.toLowerCase() !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Insufficient privileges.' });
+  }
+
+  const { id } = req.params;
+  try {
+    // Delete user account
+    const result = await pool.query('DELETE FROM UserAccounts WHERE UserID = $1 RETURNING *', [id]);
+    
+    if (result.rows.length > 0) {
+      res.json({ message: 'User account deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    
+    if (err.code === '23503') { // Foreign key constraint violation
+      res.status(400).json({ error: 'Cannot delete user. There are related records.' });
+    } else {
+      res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+  }
+});
+
 // GET /auth/staff-count
 // Get count of staff members (doctors and admins)
 // Requires authentication
