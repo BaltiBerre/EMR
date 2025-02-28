@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as math from 'mathjs';
 import axios from 'axios';
+import { X, Plus, Check, UserMinus, UserCheck, MinusCircle, Aperture } from 'lucide-react' ;
 
 // defines the component
 function AccountManagement() {
@@ -82,6 +83,38 @@ const fetchPatients = async () => {
         setError('Failed to load patients')
     }}
 
+    const handleDeleteDoctor = async(doctorid, userid, username) => {
+        if (!window.confirm(`Are you sure you want to delete ${username}? This action cannot be undone`)) {
+            return;
+        }
+        try {
+        const token = localStorage.getItem('token');
+    
+        // tries to delete the doctor record first
+        if (doctorid) {
+            try {
+                await axios.delete(`${API_URL}/api/doctors/${doctorid}`, {
+                    headers: {Authorization: `bearers: ${token}` }
+                })
+            } catch (err) {
+                console.error("Error deleting doctor record:", err);
+            }
+        }
+        await axios.delete(`${API_URL}/api/auth/users/${userid}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+    
+        await fetchDoctors();
+        
+        setDoctors(prev => prev.filter(doc => doc.userid !== userid))
+        setError(null);
+    } catch (err) {
+        console.error('Error deleting doctors', err);
+        setError('Failed to delete doctor');
+    } finally {
+        setLoading(false);
+    }
+    } 
 
     // form that handles doctor creation
     // (e) because we're passing an event object in
@@ -103,10 +136,10 @@ const handleCreateDoctor = async (e) => {
         });
         
         // get the userid from the useraccounts table
-
         const userid = userResponse.data.userid
 
         // create the doctor record
+        try {
         await axios.post(`${API_URL}/api/doctors`, {
             userid: userid,
             firstname: newDoctor.firstname,
@@ -117,6 +150,11 @@ const handleCreateDoctor = async (e) => {
         }, {
             headers: {Authorization: `Bearer ${token}`}
         });
+        } catch (err) {
+            console.error("Failed to create doctor record:", err);
+            await axios.delete(`${API_URL}/api/auth/users/${userid}`);
+            throw new Error("Failed to create complete doctor profile")
+        }
 
         setNewDoctor({
             username: '',
@@ -139,6 +177,9 @@ const handleCreateDoctor = async (e) => {
         setError('Failed to create new Doc account');
         setLoading(false);
     }
+
+
+
 } 
     return (
 
@@ -152,7 +193,7 @@ const handleCreateDoctor = async (e) => {
             {!isModifyMode ? (
                 <button
                 onClick={() => setIsModifyMode(true)}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700'
+                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:translate-y-1 transition-transform'
                 >
                     Modify
                 </button>
@@ -161,7 +202,7 @@ const handleCreateDoctor = async (e) => {
                 <div className='flex space-x-2'>
                     <button
                         onClick={() => setIsModifyMode(false)}
-                        className='px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600'
+                        className='px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 active:translate-y-1 transition-transform'
                     >
                         Back
                     </button>
@@ -202,9 +243,25 @@ const handleCreateDoctor = async (e) => {
                 <div>
                     <h3 className="font-medium mb-4"> Doctors ({doctors.length})</h3>
                     <ul className="border rounded-lg divide-y">
-                        {doctors.map(doctors => (
-                            <li key={doctors.userid} className="p-3 hover:bg-gray-50">
-                                {doctors.username}
+                        {doctors.map(doctor => (
+                            <li 
+                                key={doctor.userid} 
+                                className="p-3 hover:bg-gray-50 flex justify-between items-center cursor-pointer"
+                                onClick={() => setSelectedDoctor(doctor)}
+                            >
+                                <span>{doctor.username}</span>
+                                {isModifyMode && (
+                                    <MinusCircle
+                                        className='h-5 w-5 text-red-500 hover:text-red-700'
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            console.log("about to delete:", doctor);
+                                            console.log(`doctor id${doctor.doctorid} doctor id ${doctor.userid} and username     ${doctor.username}`)
+                                            handleDeleteDoctor(doctor.doctorid, doctor.userid, doctor.username);
+                                        }}
+                                    />
+                                )} 
+  
                             </li>
                         ))}
                         {doctors.length === 0 && (
