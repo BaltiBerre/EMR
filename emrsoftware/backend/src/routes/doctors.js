@@ -31,7 +31,7 @@ router.get('/', authenticateToken, async (req, res) => {
             WHEN a.AppointmentDate >= CURRENT_DATE 
             THEN 1 END) as upcoming_appointments                 -- Count future appointments
         FROM UserAccounts ua
-        LEFT JOIN Appointments a ON ua.userid = a.DoctorID
+        LEFT JOIN Appointments a ON ua.userid = a.doctorid
         WHERE ua.role = 'Doctor'
         GROUP BY ua.userid
       )
@@ -39,10 +39,12 @@ router.get('/', authenticateToken, async (req, res) => {
       SELECT 
         ua.userid,
         ua.username,
+        d.doctorid,
         COALESCE(ds.patient_count, 0) as patient_count,        -- Default to 0 if no patients
         COALESCE(ds.upcoming_appointments, 0) as upcoming_appointments
       FROM UserAccounts ua
       LEFT JOIN DoctorStats ds ON ua.userid = ds.userid
+      LEFT JOIN Doctors d ON ua.userid = d.userid
       WHERE ua.role = 'Doctor'
       ORDER BY ua.username;
     `);
@@ -73,7 +75,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,  -- Past appointments
         COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments  -- Future appointments
       FROM UserAccounts ua
-      LEFT JOIN Appointments a ON ua.userid = a.DoctorID
+      LEFT JOIN Appointments a ON ua.userid = a.doctorid
       WHERE ua.userid = $1 AND ua.role = 'Doctor'
       GROUP BY ua.userid;
     `;
@@ -93,7 +95,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       FROM Patients p
       JOIN Appointments a ON p.PatientID = a.PatientID
       LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID
-      WHERE a.DoctorID = $1
+      WHERE a.doctorid = $1
       GROUP BY p.PatientID, mr.Diagnosis, mr.VisitDate
       ORDER BY p.PatientID, last_visit DESC;
     `;
@@ -116,6 +118,33 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Error fetching doctor details', error: error.message });
   }
 });
+
+// DELETE /doctors/:id
+// DELETE a doctor record
+
+router.delete('/:doctorid', authenticateToken, async (req, res) => {
+  const { doctorid } = req.params;
+  try {
+    // attempt to delete the doctor
+    const result = await pool.query('DELETE FROM Doctors WHERE doctorid = $1 RETURNING *', [doctorid]);
+
+    // confirmation of success
+    if (result.rows.length > 0) {
+      res.json({ message: 'Doctor deleted succesfully'});
+    } else {
+      res.status(404).json({ error: 'Doctor not found' });
+    }
+
+
+  } catch(err) {
+    console.error(err);
+    if (err.code === '23503') {
+      res.status(400).json({ error: 'Cannot delete doctor. There are related records.'})
+    } else {
+      res.status(500).json({ error: 'Internal server error', details: err.message });
+    }
+  }
+})
 // POST /doctors
 // Create new Doctor Record
 router.post('/', [
