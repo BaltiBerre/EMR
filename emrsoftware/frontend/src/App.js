@@ -10,6 +10,7 @@ function App() {
   const [backendStatus, setBackendStatus] = useState('Checking...');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [isLoggedIn, setisLoggedIn] = useState(false);
   // main reason we're using useEffect is bc we want this to run once at the beginning of the application
   // and the [] makes it so that it only runs once when the component is loaded.
   useEffect(() => {
@@ -46,6 +47,7 @@ function App() {
     if (token && role) {
       setIsAuthenticated(true);
       setUserRole(role.toLowerCase());
+      setisLoggedIn(true);
     } else {
       // If either token or role is missing, reset authentication status
       setIsAuthenticated(false);
@@ -61,6 +63,7 @@ function App() {
     localStorage.removeItem('userRole');
     setIsAuthenticated(false);
     setUserRole(null);
+    setisLoggedIn(false);
   };
 
   return (
