@@ -22,31 +22,20 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     // Complex SQL query using Common Table Expression (CTE)
     const result = await pool.query(`
-      -- CTE to calculate statistics for each doctor
-      WITH DoctorStats AS (
-        SELECT 
-          ua.userid,
-          COUNT(DISTINCT a.PatientID) as patient_count,         -- Count unique patients
-          COUNT(CASE 
-            WHEN a.AppointmentDate >= CURRENT_DATE 
-            THEN 1 END) as upcoming_appointments                 -- Count future appointments
-        FROM UserAccounts ua
-        LEFT JOIN Appointments a ON ua.userid = a.doctorid
-        WHERE ua.role = 'Doctor'
-        GROUP BY ua.userid
-      )
-      -- Main query to combine user accounts with statistics
       SELECT 
-        ua.userid,
-        ua.username,
         d.doctorid,
-        COALESCE(ds.patient_count, 0) as patient_count,        -- Default to 0 if no patients
-        COALESCE(ds.upcoming_appointments, 0) as upcoming_appointments
-      FROM UserAccounts ua
-      LEFT JOIN DoctorStats ds ON ua.userid = ds.userid
-      LEFT JOIN Doctors d ON ua.userid = d.userid
-      WHERE ua.role = 'Doctor'
-      ORDER BY ua.username;
+        d.userid,
+        ua.username,
+        d.firstname,
+        d.lastname,
+        d.specialization,
+        COUNT(DISTINCT a.PatientID) as patient_count,
+        COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
+      FROM Doctors d
+      JOIN UserAccounts ua ON d.userid = ua.userid
+      LEFT JOIN Appointments a ON d.doctorid = a.doctorid
+      GROUP BY d.doctorid, d.userid, ua.username, d.firstname, d.lastname, d.specialization
+      ORDER BY d.doctorid;
     `);
     
     console.log('Query result:', result.rows);
