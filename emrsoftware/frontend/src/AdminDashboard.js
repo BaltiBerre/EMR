@@ -4,7 +4,7 @@ import { Activity, LogOut, Plus } from 'lucide-react';
 import PatientList from './components/PatientList';
 import PatientOverview from './components/PatientOverview';
 import DoctorList from './components/doctorList';
-import DoctorManagement from './admin/DoctorManagement.js';
+import DoctorManagement from './components/admin/DoctorManagement';
 
 
 function AdminDashboard() {
