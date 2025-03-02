@@ -1,3 +1,4 @@
+///Users/balti/Documents/School/IS/EMR/emrsoftware/frontend/src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
