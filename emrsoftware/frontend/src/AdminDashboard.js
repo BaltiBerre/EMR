@@ -4,7 +4,7 @@ import { Activity, LogOut, Plus } from 'lucide-react';
 import PatientList from './components/PatientList';
 import PatientOverview from './components/PatientOverview';
 import DoctorList from './components/doctorList';
-import AccountManagement from './admin/AccountManagement';
+import DoctorManagement from './admin/DoctorManagement.js';
 
 
 function AdminDashboard() {
@@ -50,6 +50,16 @@ function AdminDashboard() {
           >
             Patients List
           </button>
+          <button
+            className={`px-6 py-3 font-medium ${
+                activeTab === 'doctor-management'
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+            }`}
+              onClick={() => setActiveTab('doctor-management')}
+            >
+              Doctor Management
+            </button>
           <button 
             className={`px-6 py-3 font-medium ${
               activeTab === 'doctors' 
@@ -60,16 +70,6 @@ function AdminDashboard() {
           >
             Doctors
           </button>
-          <button
-            className={`px-6 py-3 font-medium ${
-              activeTab == 'account-management'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('account-management')}
-            >
-              Account Management
-            </button>
         </div>
 
         {/* Content Area */}
@@ -77,7 +77,7 @@ function AdminDashboard() {
           {activeTab === 'patients-overview' && <PatientOverview />}
           {activeTab === 'patients-list' && <PatientList />}
           {activeTab === 'doctors' && <DoctorList />}
-          {activeTab === 'account-management' && <AccountManagement />}
+          {activeTab === 'doctor-management' && <DoctorManagement />}
         </div>
       </main>
     </div>
