@@ -42,7 +42,7 @@ router.post('/', [
   // Ensure reason for visit is not empty
   body('ReasonForVisit').notEmpty().withMessage('Reason for visit is required'),
   // Validate appointment status against allowed values
-  body('Status').isIn(['Scheduled', 'Completed', 'Cancelled'])
+  body('Status').isIn(['Confirmed', 'Canceled', 'Completed', 'Pending'])
     .withMessage('Invalid status')
 ], authenticateToken, async (req, res) => {
   // Check for validation errors
