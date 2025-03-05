@@ -29,16 +29,9 @@ function PatientList() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        setError('No authentication token found');
-        setLoading(false);
-        return;
-      }
-      
+
       const response = await axios.get(`${API_URL}/api/patients`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true // This enables sending cookies with the request
       });
       setPatients(response.data);
       setLoading(false);
@@ -72,9 +65,9 @@ function PatientList() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem('token');
+
       await axios.post(`${API_URL}/api/patients`, newPatient, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
       setNewPatient({
         FirstName: '',
@@ -95,9 +88,8 @@ function PatientList() {
 
   const handleDelete = async (patientId) => {
     try {
-      const token = localStorage.getItem('token');
       await axios.delete(`${API_URL}/api/patients/${patientId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
       setSelectedPatients(prev => prev.filter(id => id !== patientId));
       fetchPatients();
@@ -110,12 +102,11 @@ function PatientList() {
 
   const handleBatchDelete = async () => {
     try {
-      const token = localStorage.getItem('token');
       // Use Promise.all to delete multiple patients in parallel
       await Promise.all(
         selectedPatients.map(patientId => 
           axios.delete(`${API_URL}/api/patients/${patientId}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            withCredentials: true
           })
         )
       );
