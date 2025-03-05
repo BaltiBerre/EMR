@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Activity, LogOut, Plus } from 'lucide-react';
 import PatientList from './components/PatientList';
 import PatientOverview from './components/PatientOverview';
-import DoctorList from './components/doctorList';
 import DoctorManagement from './components/admin/DoctorManagement';
 
 
@@ -60,23 +59,12 @@ function AdminDashboard() {
             >
               Doctor Management
             </button>
-          <button 
-            className={`px-6 py-3 font-medium ${
-              activeTab === 'doctors' 
-                ? 'border-b-2 border-blue-600 text-blue-600' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            onClick={() => setActiveTab('doctors')}
-          >
-            Doctors
-          </button>
         </div>
 
         {/* Content Area */}
         <div>
           {activeTab === 'patients-overview' && <PatientOverview />}
           {activeTab === 'patients-list' && <PatientList />}
-          {activeTab === 'doctors' && <DoctorList />}
           {activeTab === 'doctor-management' && <DoctorManagement />}
         </div>
       </main>
