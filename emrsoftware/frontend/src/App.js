@@ -18,6 +18,8 @@ function App() {
     checkAuthStatus();
   }, []);
 
+  const API_URL = process.env.REACT_APP_API_URL || '';
+
   const checkBackendStatus = async () => {
     //async means response might take a while
     try {
@@ -34,44 +36,47 @@ function App() {
   };
 
   const checkAuthStatus = () => {
-    // Retrieve authentication token from localStorage
-    const token = localStorage.getItem('token');
-    
     // Retrieve user role from localStorage
     const role = localStorage.getItem('userRole');
     
     // Log authentication check details for debugging
-    console.log('Auth check:', { hasToken: !!token, role });
+    console.log('Auth check:', { role });
   
-    // If both token and role exist, set authentication status and normalize role to lowercase
-    if (token && role) {
+    // If role exists, set authentication status and normalize role to lowercase
+    if (role) {
       setIsAuthenticated(true);
       setUserRole(role.toLowerCase());
       setisLoggedIn(true);
     } else {
-      // If either token or role is missing, reset authentication status
+      // If role is missing, reset authentication status
       setIsAuthenticated(false);
       setUserRole(null);
+      setisLoggedIn(false);
     }
   };
   
   
     // logout logic
-  const handleLogout = () => {
-    // removes from localStorage token and role
-    localStorage.removeItem('token');
-    localStorage.removeItem('userRole');
-    setIsAuthenticated(false);
-    setUserRole(null);
-    setisLoggedIn(false);
-  };
+    const handleLogout = async () => {
+      try {
+        await axios.post(`${API_URL}/api/auth/logout`, {}, { withCredentials: true });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+      
+      localStorage.removeItem('userRole');
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setisLoggedIn(false);
+    };
+    
 
   return (
     <Router>
     <div className="min-h-screen bg-gray-50 flex flex-col test-bg">
       <div className="min-h-screen bg-gray-50 flex flex-col">
         {isAuthenticated && (
-          <header className="bg-white shadow-sm">
+          <header className="bg-black shadow-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
               <h1 className="text-2xl font-bold text-gray-900">EMR Software</h1>
               <div className="flex items-center gap-4">
