@@ -22,26 +22,15 @@ const PatientDashboard = () => {
   // fetches data from backend, async so to not crash immediately and lets know that there's wait time
   const fetchDashboardData = async () => {
     try {
-      // retrieves token from the local storage
-      const token = localStorage.getItem('token');
-      // error case for token not being there
-      if (!token) {
-        setError('No authentication token found');
-        setLoading(false);
-        return;
-      }
-
-      // creating a bearer token 
-      const headers = { 
-        Authorization: `Bearer ${token}`
-      };
-
       // Fetch appointments
-      const appointmentsResponse = await axios.get(`${API_URL}/api/appointments`, { headers });
+      const appointmentsResponse = await axios.get(`${API_URL}/api/appointments`, { 
+        withCredentials: true
+       });
       setAppointments(appointmentsResponse.data || []);
 
       // Fetch medical records
-      const recordsResponse = await axios.get(`${API_URL}/api/medical-records`, { headers });
+      const recordsResponse = await axios.get(`${API_URL}/api/medical-records`, { 
+        withCredentials:true });
       setMedicalRecords(recordsResponse.data || []);
 
       // sets the loading to false
