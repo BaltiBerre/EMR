@@ -112,6 +112,10 @@ router.put('/:id', [
 router.delete('/:id', authenticateToken, async (req, res) => {
  const { id } = req.params;
  try {
+
+    // First delete associated appointments
+    await pool.query('DELETE FROM Appointments WHERE PatientID = $1', [id]);
+    
    // Attempt to delete patient
    const result = await pool.query('DELETE FROM Patients WHERE PatientID = $1 RETURNING *', [id]);
    if (result.rows.length > 0) {
