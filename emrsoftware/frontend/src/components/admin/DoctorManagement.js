@@ -50,7 +50,7 @@ function DoctorManagement() {
   // Fetch doctor details
   const fetchDoctorDetails = async (doctorId) => {
     try {
-      const response = await axios.get(`${API_URL}/api/doctors`, {
+      const response = await axios.get(`${API_URL}/api/doctors/${doctorId}`, {
         withCredentials: true // This tells axios to include cookies
       });
       setSelectedDoctor(response.data);
@@ -58,7 +58,7 @@ function DoctorManagement() {
       console.error('Error fetching doctor details:', err);
       setError('Failed to load doctor details');
     }
-  };
+  };  
 
   // Delete a doctor
   const handleDeleteDoctor = async (doctorid, userid, username) => {
@@ -243,19 +243,19 @@ function DoctorManagement() {
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <div className="text-sm text-gray-600">Total Patients</div>
                     <div className="text-2xl font-bold">
-                      {selectedDoctor.statistics.unique_patients}
+                    {selectedDoctor.statistics && selectedDoctor.statistics.unique_patients || 0}
                     </div>
                   </div>
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <div className="text-sm text-gray-600">Completed Appointments</div>
                     <div className="text-2xl font-bold">
-                      {selectedDoctor.statistics.completed_appointments}
+                      {selectedDoctor.statistics && selectedDoctor.statistics.completed_appointments || 0}
                     </div>
                   </div>
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <div className="text-sm text-gray-600">Upcoming Appointments</div>
                     <div className="text-2xl font-bold">
-                      {selectedDoctor.statistics.upcoming_appointments}
+                      {selectedDoctor.statistics && selectedDoctor.statistics.upcoming_appointments || 0}
                     </div>
                   </div>
                 </div>
