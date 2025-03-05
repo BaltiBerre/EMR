@@ -59,35 +59,38 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     // Query to get doctor's statistics
     const statsQuery = `
-      SELECT 
-        COUNT(DISTINCT a.PatientID) as unique_patients,         -- Total unique patients
-        COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,  -- Past appointments
-        COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments  -- Future appointments
-      FROM UserAccounts ua
-      LEFT JOIN Appointments a ON ua.userid = a.doctorid
-      WHERE ua.userid = $1 AND ua.role = 'Doctor'
-      GROUP BY ua.userid;
-    `;
+    SELECT 
+      COUNT(DISTINCT a.PatientID) as unique_patients,
+      COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,
+      COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
+    FROM Doctors d
+    LEFT JOIN Appointments a ON d.DoctorID = a.DoctorID
+    WHERE d.UserID = $1
+    GROUP BY d.DoctorID;
+  `;
+  
 
     // Query to get detailed patient information for the doctor
     const patientsQuery = `
-      SELECT DISTINCT ON (p.PatientID)
-        p.PatientID as patientid,
-        p.FirstName as firstname,
-        p.LastName as lastname,
-        MAX(mr.VisitDate) as last_visit,                       -- Most recent visit
-        COUNT(mr.RecordID) as visit_count,                     -- Total visits
-        FIRST_VALUE(mr.Diagnosis) OVER (                       -- Most recent diagnosis
-          PARTITION BY p.PatientID 
-          ORDER BY mr.VisitDate DESC
-        ) as latest_diagnosis
-      FROM Patients p
-      JOIN Appointments a ON p.PatientID = a.PatientID
-      LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID
-      WHERE a.doctorid = $1
-      GROUP BY p.PatientID, mr.Diagnosis, mr.VisitDate
-      ORDER BY p.PatientID, last_visit DESC;
-    `;
+    SELECT DISTINCT ON (p.PatientID)
+      p.PatientID as patientid,
+      p.FirstName as firstname,
+      p.LastName as lastname,
+      MAX(mr.VisitDate) as last_visit,
+      COUNT(mr.RecordID) as visit_count,
+      FIRST_VALUE(mr.Diagnosis) OVER (
+        PARTITION BY p.PatientID 
+        ORDER BY mr.VisitDate DESC
+      ) as latest_diagnosis
+    FROM Patients p
+    JOIN Appointments a ON p.PatientID = a.PatientID
+    LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID
+    JOIN Doctors d ON a.DoctorID = d.DoctorID
+    WHERE d.UserID = $1
+    GROUP BY p.PatientID, mr.Diagnosis, mr.VisitDate
+    ORDER BY p.PatientID, last_visit DESC;
+  `;
+  
 
     // Execute both queries
     const stats = await pool.query(statsQuery, [req.params.id]);
