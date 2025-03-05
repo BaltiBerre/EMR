@@ -83,7 +83,12 @@ router.post('/login', [
           process.env.JWT_SECRET,
           { expiresIn: '1h' }
         );
-        res.json({ message: 'Login successful', token, role: user.role.toLowerCase() });
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production', // Only use HTTPS in production
+          sameSite: 'strict',
+          maxAge: 3600000 // 1 hour in milliseconds
+        }).json({ message: 'Login successful', role: user.role.toLowerCase() });
       } else {
         res.status(401).json({ error: 'Invalid credentials' });
       }
@@ -94,6 +99,18 @@ router.post('/login', [
     console.error('Login error:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
+});
+
+// POST /auth/logout
+// Clear authentication cookie
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  });
+  
+  res.json({ message: 'Logged out successfully' });
 });
 
 
