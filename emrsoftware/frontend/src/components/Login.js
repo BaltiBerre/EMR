@@ -21,10 +21,10 @@ function Login({ setIsAuthenticated, setUserRole }) {
       const response = await axios.post(`${API_URL}/api/auth/login`, {
         Username: username,
         Password: password
+      }, {
+        withCredentials: true
       });
   
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
         const userRole = response.data.role.toLowerCase();
         localStorage.setItem('userRole', userRole);
         setIsAuthenticated(true);
@@ -42,15 +42,14 @@ function Login({ setIsAuthenticated, setUserRole }) {
         } else {
           setError('Unknown user role');
         }
+      } catch (err) {
+        console.error('Login error:', error);
+        setError(
+          error.response?.data?.message || 
+          'Login failed. Please try again.'
+        );
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      setError(
-        error.response?.data?.message || 
-        'Login failed. Please try again.'
-      );
-    }
-  };
+    };
   
 
   return (
