@@ -70,7 +70,7 @@ function DoctorManagement() {
     
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token');  
     
       // First try to delete doctor record
       if (doctorid) {
