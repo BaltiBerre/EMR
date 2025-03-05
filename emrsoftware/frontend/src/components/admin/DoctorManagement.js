@@ -33,9 +33,8 @@ function DoctorManagement() {
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/doctors`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true // This tells axios to include cookies
       });
       
       setDoctors(response.data);
@@ -51,9 +50,8 @@ function DoctorManagement() {
   // Fetch doctor details
   const fetchDoctorDetails = async (doctorId) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/doctors/${doctorId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${API_URL}/api/doctors`, {
+        withCredentials: true // This tells axios to include cookies
       });
       setSelectedDoctor(response.data);
     } catch (err) {
@@ -70,13 +68,12 @@ function DoctorManagement() {
     
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');  
-    
+  
       // First try to delete doctor record
       if (doctorid) {
         try {
           await axios.delete(`${API_URL}/api/doctors/${doctorid}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            withCredentials: true // Use cookies instead of token header
           });
         } catch (err) {
           console.error("Error deleting doctor record:", err);
@@ -85,7 +82,7 @@ function DoctorManagement() {
       
       // Then delete user account
       await axios.delete(`${API_URL}/api/auth/users/${userid}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
     
       // Update doctors list and reset selected doctor if it was deleted
@@ -108,7 +105,6 @@ function DoctorManagement() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
 
       // Create user account first
       const userResponse = await axios.post(`${API_URL}/api/auth/register`, {
@@ -116,9 +112,8 @@ function DoctorManagement() {
         Password: newDoctor.password,
         Role: 'Doctor'
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true // This enables sending cookies with the request
       });
-      
       // Get the userid from the created user account
       const userid = userResponse.data.userid;
 
@@ -132,13 +127,13 @@ function DoctorManagement() {
           phonenumber: newDoctor.phonenumber,
           email: newDoctor.email
         }, {
-          headers: { Authorization: `Bearer ${token}` }
+          withCredentials: true
         });
       } catch (err) {
         console.error("Failed to create doctor record:", err);
         // Clean up by deleting the user account if doctor record creation fails
         await axios.delete(`${API_URL}/api/auth/users/${userid}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          withCredentials: true
         });
         throw new Error("Failed to create complete doctor profile");
       }
