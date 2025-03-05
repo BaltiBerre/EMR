@@ -5,7 +5,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
-
+const os = require('os');
 const app = express();
 const port = process.env.PORT || 4000;
 
@@ -74,4 +74,21 @@ app.listen(port, () => {
   } else {
     console.error('Error starting server:', err);
   }
+});
+
+const resourceInterval = setInterval(() => {
+  const memoryUsage = process.memoryUsage();
+  const cpuUsage = os.loadavg()[0] / os.cpus().length * 100; // Average load / cores
+  
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    memory: Math.round(memoryUsage.rss / 1024 / 1024), // MB
+    cpu: Math.round(cpuUsage)
+  }));
+}, 5000);
+
+// Clear interval when done testing
+process.on('SIGINT', () => {
+  clearInterval(resourceInterval);
+  process.exit();
 });

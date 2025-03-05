@@ -55,7 +55,7 @@ const initializeTables = async () => {
         AppointmentDate DATE NOT NULL,
         AppointmentTime TIME NOT NULL,
         ReasonForVisit TEXT,
-        Status VARCHAR(20) CHECK (Status IN ('Scheduled', 'Completed', 'Cancelled')),
+        Status VARCHAR(20) CHECK (Status IN ('Confirmed', 'Canceled', 'Completed', 'Pending')),
         CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
