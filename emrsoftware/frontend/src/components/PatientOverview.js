@@ -26,9 +26,8 @@ function PatientOverview() {
   
   const fetchOverview = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/patient-overview`, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true
       });
       setOverview(response.data);
       setLoading(false);
