@@ -1,0 +1,8 @@
+Checking SSL/TLS configuration...
+
+Development server is using HTTP. Production environment should use HTTPS with:
+- Minimum TLS version: 1.2
+- Strong cipher suites
+- HSTS enabled
+
+Recommendation: Configure secure HTTPS for production deployment.

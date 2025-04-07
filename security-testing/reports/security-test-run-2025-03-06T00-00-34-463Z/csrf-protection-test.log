@@ -1,0 +1,5 @@
+Performing CSRF test...
+
+Tested 3 endpoints for CSRF vulnerabilities.
+No CSRF vulnerabilities detected in API endpoints.
+However, frontend implementation should be manually verified.

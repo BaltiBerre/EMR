@@ -1,0 +1,23 @@
+
+EMR Security Test Summary
+========================
+Test Run: 3/5/2025, 2:09:03 PM
+Location: /Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T19-09-03-075Z
+
+Results Summary:
+- Total Tests: 6
+- Successful: 2
+- Failed: 4
+- Total Duration: 0.24 seconds
+
+Test Details:
+- OWASP ZAP Vulnerability Scan: FAILED (0.01s)
+- SQL Injection Test: FAILED (0.07s)
+- Cross-Site Scripting Test: FAILED (0.06s)
+- Authentication Security Test: FAILED (0.05s)
+- CSRF Protection Test: SUCCESS (0.03s)
+- Security Headers Test: SUCCESS (0.03s)
+
+For detailed results, please check:
+- JSON report: /Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T19-09-03-075Z/security-test-results.json
+- Individual log files in the test run directory

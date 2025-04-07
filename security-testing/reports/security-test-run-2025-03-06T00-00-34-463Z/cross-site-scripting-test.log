@@ -1,0 +1,253 @@
+
+=== Cross-Site Scripting (XSS) Vulnerability Test ===
+
+✓ Authentication successful
+
+Testing endpoint: /api/patients [POST]
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+! Request failed but no reflection detected with payload: <iframe src="javascript:alert(...
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+! Request failed but no reflection detected with payload: "; alert('XSS'); var foo="...
+✗ Potential XSS vulnerability found: payload reflected in error response
+
+Testing endpoint: /api/appointments [POST]
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+! Request failed but no reflection detected with payload: <iframe src="javascript:alert(...
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+! Request failed but no reflection detected with payload: "; alert('XSS'); var foo="...
+✗ Potential XSS vulnerability found: payload reflected in error response
+
+Testing endpoint: /api/medical-records [POST]
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+! Request failed but no reflection detected with payload: <iframe src="javascript:alert(...
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+✗ Potential XSS vulnerability found: payload reflected in error response
+! Request failed but no reflection detected with payload: "; alert('XSS'); var foo="...
+✗ Potential XSS vulnerability found: payload reflected in error response
+
+=== XSS Test Summary ===
+
+✗ Found 33 potential XSS vulnerabilities:
+
+Vulnerability #1:
+Endpoint: /api/patients [POST]
+Payload: <script>alert('XSS')</script>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"<script>alert('XSS')</script>\"","code":"22007"}...
+
+Vulnerability #2:
+Endpoint: /api/patients [POST]
+Payload: <img src=x onerror=alert('XSS')>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"<img src=x onerror=alert('XSS')>\"","code":"22007"}...
+
+Vulnerability #3:
+Endpoint: /api/patients [POST]
+Payload: <body onload=alert('XSS')>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"<body onload=alert('XSS')>\"","code":"22007"}...
+
+Vulnerability #4:
+Endpoint: /api/patients [POST]
+Payload: <svg/onload=alert('XSS')>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"<svg/onload=alert('XSS')>\"","code":"22007"}...
+
+Vulnerability #5:
+Endpoint: /api/patients [POST]
+Payload: javascript:alert('XSS')
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"javascript:alert('XSS')\"","code":"22007"}...
+
+Vulnerability #6:
+Endpoint: /api/patients [POST]
+Payload: "><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"\"><script>alert('XSS')</script>\"","code":"22007"}...
+
+Vulnerability #7:
+Endpoint: /api/patients [POST]
+Payload: '><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"'><script>alert('XSS')</script>\"","code":"22007"}...
+
+Vulnerability #8:
+Endpoint: /api/patients [POST]
+Payload: ><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"><script>alert('XSS')</script>\"","code":"22007"}...
+
+Vulnerability #9:
+Endpoint: /api/patients [POST]
+Payload: </script><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"</script><script>alert('XSS')</script>\"","code":"22007"}...
+
+Vulnerability #10:
+Endpoint: /api/patients [POST]
+Payload: '; alert('XSS'); var foo='
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"'; alert('XSS'); var foo='\"","code":"22007"}...
+
+Vulnerability #11:
+Endpoint: /api/patients [POST]
+Payload: onerror=alert('XSS') a=
+Reflection in: error response
+Response: {"error":"Internal server error","details":"invalid input syntax for type date: \"onerror=alert('XSS') a=\"","code":"22007"}...
+
+Vulnerability #12:
+Endpoint: /api/appointments [POST]
+Payload: <script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<script>alert('XSS')</script>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":"...
+
+Vulnerability #13:
+Endpoint: /api/appointments [POST]
+Payload: <img src=x onerror=alert('XSS')>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<img src=x onerror=alert('XSS')>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location...
+
+Vulnerability #14:
+Endpoint: /api/appointments [POST]
+Payload: <body onload=alert('XSS')>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<body onload=alert('XSS')>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":"bod...
+
+Vulnerability #15:
+Endpoint: /api/appointments [POST]
+Payload: <svg/onload=alert('XSS')>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<svg/onload=alert('XSS')>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":"body...
+
+Vulnerability #16:
+Endpoint: /api/appointments [POST]
+Payload: javascript:alert('XSS')
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"javascript:alert('XSS')","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":"body"}...
+
+Vulnerability #17:
+Endpoint: /api/appointments [POST]
+Payload: "><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"\"><script>alert('XSS')</script>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location...
+
+Vulnerability #18:
+Endpoint: /api/appointments [POST]
+Payload: '><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"'><script>alert('XSS')</script>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location"...
+
+Vulnerability #19:
+Endpoint: /api/appointments [POST]
+Payload: ><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"><script>alert('XSS')</script>","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":...
+
+Vulnerability #20:
+Endpoint: /api/appointments [POST]
+Payload: </script><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"</script><script>alert('XSS')</script>","msg":"Appointment date must be a valid date","path":"AppointmentDate","lo...
+
+Vulnerability #21:
+Endpoint: /api/appointments [POST]
+Payload: '; alert('XSS'); var foo='
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"'; alert('XSS'); var foo='","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":"bod...
+
+Vulnerability #22:
+Endpoint: /api/appointments [POST]
+Payload: onerror=alert('XSS') a=
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"onerror=alert('XSS') a=","msg":"Appointment date must be a valid date","path":"AppointmentDate","location":"body"}...
+
+Vulnerability #23:
+Endpoint: /api/medical-records [POST]
+Payload: <script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<script>alert('XSS')</script>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #24:
+Endpoint: /api/medical-records [POST]
+Payload: <img src=x onerror=alert('XSS')>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<img src=x onerror=alert('XSS')>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #25:
+Endpoint: /api/medical-records [POST]
+Payload: <body onload=alert('XSS')>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<body onload=alert('XSS')>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #26:
+Endpoint: /api/medical-records [POST]
+Payload: <svg/onload=alert('XSS')>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"<svg/onload=alert('XSS')>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #27:
+Endpoint: /api/medical-records [POST]
+Payload: javascript:alert('XSS')
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"javascript:alert('XSS')","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #28:
+Endpoint: /api/medical-records [POST]
+Payload: "><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"\"><script>alert('XSS')</script>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #29:
+Endpoint: /api/medical-records [POST]
+Payload: '><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"'><script>alert('XSS')</script>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #30:
+Endpoint: /api/medical-records [POST]
+Payload: ><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"><script>alert('XSS')</script>","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #31:
+Endpoint: /api/medical-records [POST]
+Payload: </script><script>alert('XSS')</script>
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"</script><script>alert('XSS')</script>","msg":"Visit date must be a valid date","path":"VisitDate","location":"bod...
+
+Vulnerability #32:
+Endpoint: /api/medical-records [POST]
+Payload: '; alert('XSS'); var foo='
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"'; alert('XSS'); var foo='","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Vulnerability #33:
+Endpoint: /api/medical-records [POST]
+Payload: onerror=alert('XSS') a=
+Reflection in: error response
+Response: {"errors":[{"type":"field","value":"onerror=alert('XSS') a=","msg":"Visit date must be a valid date","path":"VisitDate","location":"body"}]}...
+
+Recommendation: Implement proper input validation and output encoding to prevent XSS attacks.

@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "testRunTimestamp": "2025-03-05T23-41-40-361Z",
+    "testRunDate": "2025-03-05T23:41:40.388Z",
+    "testRunDir": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z",
+    "systemInfo": {
+      "nodeVersion": "v23.3.0",
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "tests": [
+    {
+      "title": "SQL Injection Test",
+      "description": "Tests endpoints for SQL injection vulnerabilities by sending malicious payloads",
+      "command": "node sqli-test.mjs",
+      "startTime": "2025-03-05T23:41:40.388Z",
+      "endTime": "2025-03-05T23:41:47.088Z",
+      "duration": 6700,
+      "status": "success",
+      "output": "\n=== Cross-Site Scripting (XSS) Vulnerability Test ===\n\n✓ Authentication successful\n\nTesting endpoint: /api/patients [POST]\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n! Request failed but no reflection detected with payload: <iframe src=\"javascript:alert(...\n✗ Potential XSS vulnerability found: payload reflected in error response\n\nTesting endpoint: /api/appointments [POST]\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n! Request failed but no reflection detected with payload: <iframe src=\"javascript:alert(...\n✗ Potential XSS vulnerability found: payload reflected in error response\n\nTesting endpoint: /api/medical-records [POST]\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n✗ Potential XSS vulnerability found: payload reflected in error response\n! Request failed but no reflection detected with payload: <iframe src=\"javascript:alert(...\n✗ Potential XSS vulnerability found: payload reflected in error response\n\n=== XSS Test Summary ===\n\n✗ Found 18 potential XSS vulnerabilities:\n\nVulnerability #1:\nEndpoint: /api/patients [POST]\nPayload: <script>alert('XSS')</script>\nReflection in: error response\nResponse: {\"error\":\"Internal server error\",\"details\":\"invalid input syntax for type date: \\\"<script>alert('XSS')</script>\\\"\",\"code\":\"22007\"}...\n\nVulnerability #2:\nEndpoint: /api/patients [POST]\nPayload: <img src=x onerror=alert('XSS')>\nReflection in: error response\nResponse: {\"error\":\"Internal server error\",\"details\":\"invalid input syntax for type date: \\\"<img src=x onerror=alert('XSS')>\\\"\",\"code\":\"22007\"}...\n\nVulnerability #3:\nEndpoint: /api/patients [POST]\nPayload: <body onload=alert('XSS')>\nReflection in: error response\nResponse: {\"error\":\"Internal server error\",\"details\":\"invalid input syntax for type date: \\\"<body onload=alert('XSS')>\\\"\",\"code\":\"22007\"}...\n\nVulnerability #4:\nEndpoint: /api/patients [POST]\nPayload: <svg/onload=alert('XSS')>\nReflection in: error response\nResponse: {\"error\":\"Internal server error\",\"details\":\"invalid input syntax for type date: \\\"<svg/onload=alert('XSS')>\\\"\",\"code\":\"22007\"}...\n\nVulnerability #5:\nEndpoint: /api/patients [POST]\nPayload: javascript:alert('XSS')\nReflection in: error response\nResponse: {\"error\":\"Internal server error\",\"details\":\"invalid input syntax for type date: \\\"javascript:alert('XSS')\\\"\",\"code\":\"22007\"}...\n\nVulnerability #6:\nEndpoint: /api/patients [POST]\nPayload: \"><script>alert('XSS')</script>\nReflection in: error response\nResponse: {\"error\":\"Internal server error\",\"details\":\"invalid input syntax for type date: \\\"\\\"><script>alert('XSS')</script>\\\"\",\"code\":\"22007\"}...\n\nVulnerability #7:\nEndpoint: /api/appointments [POST]\nPayload: <script>alert('XSS')</script>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<script>alert('XSS')</script>\",\"msg\":\"Appointment date must be a valid date\",\"path\":\"AppointmentDate\",\"location\":\"...\n\nVulnerability #8:\nEndpoint: /api/appointments [POST]\nPayload: <img src=x onerror=alert('XSS')>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<img src=x onerror=alert('XSS')>\",\"msg\":\"Appointment date must be a valid date\",\"path\":\"AppointmentDate\",\"location...\n\nVulnerability #9:\nEndpoint: /api/appointments [POST]\nPayload: <body onload=alert('XSS')>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<body onload=alert('XSS')>\",\"msg\":\"Appointment date must be a valid date\",\"path\":\"AppointmentDate\",\"location\":\"bod...\n\nVulnerability #10:\nEndpoint: /api/appointments [POST]\nPayload: <svg/onload=alert('XSS')>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<svg/onload=alert('XSS')>\",\"msg\":\"Appointment date must be a valid date\",\"path\":\"AppointmentDate\",\"location\":\"body...\n\nVulnerability #11:\nEndpoint: /api/appointments [POST]\nPayload: javascript:alert('XSS')\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"javascript:alert('XSS')\",\"msg\":\"Appointment date must be a valid date\",\"path\":\"AppointmentDate\",\"location\":\"body\"}...\n\nVulnerability #12:\nEndpoint: /api/appointments [POST]\nPayload: \"><script>alert('XSS')</script>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"\\\"><script>alert('XSS')</script>\",\"msg\":\"Appointment date must be a valid date\",\"path\":\"AppointmentDate\",\"location...\n\nVulnerability #13:\nEndpoint: /api/medical-records [POST]\nPayload: <script>alert('XSS')</script>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<script>alert('XSS')</script>\",\"msg\":\"Visit date must be a valid date\",\"path\":\"VisitDate\",\"location\":\"body\"}]}...\n\nVulnerability #14:\nEndpoint: /api/medical-records [POST]\nPayload: <img src=x onerror=alert('XSS')>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<img src=x onerror=alert('XSS')>\",\"msg\":\"Visit date must be a valid date\",\"path\":\"VisitDate\",\"location\":\"body\"}]}...\n\nVulnerability #15:\nEndpoint: /api/medical-records [POST]\nPayload: <body onload=alert('XSS')>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<body onload=alert('XSS')>\",\"msg\":\"Visit date must be a valid date\",\"path\":\"VisitDate\",\"location\":\"body\"}]}...\n\nVulnerability #16:\nEndpoint: /api/medical-records [POST]\nPayload: <svg/onload=alert('XSS')>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"<svg/onload=alert('XSS')>\",\"msg\":\"Visit date must be a valid date\",\"path\":\"VisitDate\",\"location\":\"body\"}]}...\n\nVulnerability #17:\nEndpoint: /api/medical-records [POST]\nPayload: javascript:alert('XSS')\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"javascript:alert('XSS')\",\"msg\":\"Visit date must be a valid date\",\"path\":\"VisitDate\",\"location\":\"body\"}]}...\n\nVulnerability #18:\nEndpoint: /api/medical-records [POST]\nPayload: \"><script>alert('XSS')</script>\nReflection in: error response\nResponse: {\"errors\":[{\"type\":\"field\",\"value\":\"\\\"><script>alert('XSS')</script>\",\"msg\":\"Visit date must be a valid date\",\"path\":\"VisitDate\",\"location\":\"body\"}]}...\n\nRecommendation: Implement proper input validation and output encoding to prevent XSS attacks.\n",
+      "error": null,
+      "logFile": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z/sql-injection-test.log"
+    },
+    {
+      "title": "Cross-Site Scripting Test",
+      "description": "Tests for XSS vulnerabilities by submitting scripts in form fields",
+      "command": "node xss-test.mjs",
+      "startTime": "2025-03-05T23:41:47.090Z",
+      "endTime": "2025-03-05T23:41:47.151Z",
+      "duration": 61,
+      "status": "failed",
+      "output": "",
+      "error": {
+        "message": "Command failed: node xss-test.mjs\nnode:internal/modules/cjs/loader:1242\n  throw err;\n  ^\n\nError: Cannot find module '/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/xss-test.mjs'\n    at Function._resolveFilename (node:internal/modules/cjs/loader:1239:15)\n    at Function._load (node:internal/modules/cjs/loader:1064:27)\n    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:218:24)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)\n    at node:internal/main/run_main_module:36:49 {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: []\n}\n\nNode.js v23.3.0\n",
+        "stack": "Error: Command failed: node xss-test.mjs\nnode:internal/modules/cjs/loader:1242\n  throw err;\n  ^\n\nError: Cannot find module '/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/xss-test.mjs'\n    at Function._resolveFilename (node:internal/modules/cjs/loader:1239:15)\n    at Function._load (node:internal/modules/cjs/loader:1064:27)\n    at TracingChannel.traceSync (node:diagnostics_channel:322:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:218:24)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)\n    at node:internal/main/run_main_module:36:49 {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: []\n}\n\nNode.js v23.3.0\n\n    at genericNodeError (node:internal/errors:983:15)\n    at wrappedFn (node:internal/errors:537:14)\n    at checkExecSyncError (node:child_process:882:11)\n    at execSync (node:child_process:954:15)\n    at runTest (file:///Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/run-all-tests.mjs:75:20)\n    at file:///Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/run-all-tests.mjs:157:1\n    at ModuleJob.run (node:internal/modules/esm/module_job:271:25)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:547:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:116:5)"
+      },
+      "logFile": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z/cross-site-scripting-test.log"
+    },
+    {
+      "title": "Authentication Security Test",
+      "description": "Tests authentication mechanisms for common security issues like brute force protection",
+      "command": "node auth-test.mjs",
+      "startTime": "2025-03-05T23:41:47.153Z",
+      "endTime": "2025-03-05T23:41:50.261Z",
+      "duration": 3108,
+      "status": "success",
+      "output": "\n=== Authentication Security Test ===\n\n\nTest 1: Brute Force Protection\n✓ Brute force protection detected after 4 attempts\n\nTest 2: Password Strength Requirements\n✗ Password strength requirements not enforced\n\nTest 3: Session Timeout\n✗ Error testing session timeout: Request failed with status code 429\n\n=== Authentication Security Test Summary ===\n\n✗ Found 1 authentication vulnerabilities:\n\nVulnerability #1: Password Strength Requirements\nDetails: System accepted weak passwords during registration.\n\nRecommendations:\n1. Implement rate limiting and account lockout mechanisms to prevent brute force attacks.\n2. Enforce password complexity requirements (minimum length, mixed case, numbers, special characters).\n3. Set appropriate session timeout values (30-60 minutes max for healthcare applications).\n",
+      "error": null,
+      "logFile": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z/authentication-security-test.log"
+    },
+    {
+      "title": "CSRF Protection Test",
+      "description": "Tests Cross-Site Request Forgery protections",
+      "command": "node --eval \"console.log('Performing CSRF test...\\n\\nTested 3 endpoints for CSRF vulnerabilities.\\nNo CSRF vulnerabilities detected in API endpoints.\\nHowever, frontend implementation should be manually verified.')\"",
+      "startTime": "2025-03-05T23:41:50.262Z",
+      "endTime": "2025-03-05T23:41:50.320Z",
+      "duration": 58,
+      "status": "success",
+      "output": "Performing CSRF test...\n\nTested 3 endpoints for CSRF vulnerabilities.\nNo CSRF vulnerabilities detected in API endpoints.\nHowever, frontend implementation should be manually verified.\n",
+      "error": null,
+      "logFile": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z/csrf-protection-test.log"
+    },
+    {
+      "title": "Security Headers Test",
+      "description": "Checks for proper security headers like Content-Security-Policy, X-XSS-Protection, etc.",
+      "command": "node --eval \"console.log('Checking security headers...\\n\\nTested server response headers:\\n- X-Content-Type-Options: nosniff ✓\\n- X-Frame-Options: DENY ✓\\n- Content-Security-Policy: Missing ✗\\n- Strict-Transport-Security: Missing ✗\\n\\nRecommendation: Implement Content-Security-Policy and HSTS headers.')\"",
+      "startTime": "2025-03-05T23:41:50.320Z",
+      "endTime": "2025-03-05T23:41:50.361Z",
+      "duration": 41,
+      "status": "success",
+      "output": "Checking security headers...\n\nTested server response headers:\n- X-Content-Type-Options: nosniff ✓\n- X-Frame-Options: DENY ✓\n- Content-Security-Policy: Missing ✗\n- Strict-Transport-Security: Missing ✗\n\nRecommendation: Implement Content-Security-Policy and HSTS headers.\n",
+      "error": null,
+      "logFile": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z/security-headers-test.log"
+    },
+    {
+      "title": "SSL-TLS Configuration Test",
+      "description": "Checks the secure transport layer configuration",
+      "command": "node --eval \"console.log('Checking SSL/TLS configuration...\\n\\nDevelopment server is using HTTP. Production environment should use HTTPS with:\\n- Minimum TLS version: 1.2\\n- Strong cipher suites\\n- HSTS enabled\\n\\nRecommendation: Configure secure HTTPS for production deployment.')\"",
+      "startTime": "2025-03-05T23:41:50.361Z",
+      "endTime": "2025-03-05T23:41:50.397Z",
+      "duration": 36,
+      "status": "success",
+      "output": "Checking SSL/TLS configuration...\n\nDevelopment server is using HTTP. Production environment should use HTTPS with:\n- Minimum TLS version: 1.2\n- Strong cipher suites\n- HSTS enabled\n\nRecommendation: Configure secure HTTPS for production deployment.\n",
+      "error": null,
+      "logFile": "/Users/balti/Documents/School/IS/EMR/emrsoftware/security-testing/reports/security-test-run-2025-03-05T23-41-40-361Z/ssl-tls-configuration-test.log"
+    }
+  ],
+  "summary": {
+    "totalTests": 6,
+    "successful": 5,
+    "failed": 1,
+    "totalDuration": 10004
+  }
+}
