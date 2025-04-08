@@ -71,9 +71,7 @@ app.get('/api/test-db', async (req, res) => {
 // });
 
 // Temporary API 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'API endpoint not found' });
-});
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
@@ -101,4 +99,8 @@ const resourceInterval = setInterval(() => {
 process.on('SIGINT', () => {
   clearInterval(resourceInterval);
   process.exit();
+});
+
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'API endpoint not found' });
 });
