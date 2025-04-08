@@ -11,7 +11,7 @@ const port = process.env.PORT || 4000;
 const rateLimit = require('express-rate-limit');
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4000'],
+  origin: ['https://emr-1.onrender.com','http://localhost:5173', 'http://localhost:3000', 'http://localhost:4000'],
   credentials: true
 }));
 app.use(express.json());
