@@ -25,7 +25,7 @@ function App() {
     try {
       // axios.get returns response object containing multiple pieces of info
       // await is paired with async, lets code know to wait for arrival of response object to use response
-      const response = await axios.get('/api/health');
+      const response = await axios.get(`${API_URL}/api/health`);
       // sets backendstatus to the message in the health route check
       setBackendStatus(response.data.message);
     } catch (error) {
