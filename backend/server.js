@@ -17,6 +17,8 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+app.set('trust proxy', 1);
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window per IP
@@ -44,8 +46,6 @@ app.use('/api/patient-overview', patientOverviewRouter);
 app.use('/api/fhir', fhirImportRouter);
 app.use('/api/doctors', doctorsRouter);
 
-
-app.set('trust proxy', 1);
 // Health check route
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Backend is healthy' });
@@ -72,7 +72,7 @@ app.get('/api/test-db', async (req, res) => {
 //   res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'build', 'index.html'));
 // });
 
-// Temporary API 404 handler
+// Temporary API 404 handler - NOW CORRECTLY PLACED BEFORE app.listen
 app.use('*', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });
 });
