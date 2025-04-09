@@ -44,6 +44,8 @@ app.use('/api/patient-overview', patientOverviewRouter);
 app.use('/api/fhir', fhirImportRouter);
 app.use('/api/doctors', doctorsRouter);
 
+
+app.set('trust proxy', 1);
 // Health check route
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Backend is healthy' });
