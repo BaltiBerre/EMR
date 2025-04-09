@@ -71,17 +71,8 @@ app.get('/api/test-db', async (req, res) => {
 // });
 
 // Temporary API 404 handler
-
-
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-}).on('error', (err) => {ç
-  if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${port} is already in use. Try setting a different port using the PORT environment variable:`);
-    console.error(`Example: PORT=4001 node server.js`);
-  } else {
-    console.error('Error starting server:', err);
-  }
+app.use('*', (req, res) => {
+  res.status(404).json({ message: 'API endpoint not found' });
 });
 
 const resourceInterval = setInterval(() => {
@@ -101,6 +92,13 @@ process.on('SIGINT', () => {
   process.exit();
 });
 
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'API endpoint not found' });
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${port} is already in use. Try setting a different port using the PORT environment variable:`);
+    console.error(`Example: PORT=4001 node server.js`);
+  } else {
+    console.error('Error starting server:', err);
+  }
 });
