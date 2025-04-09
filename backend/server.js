@@ -75,16 +75,16 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });
 });
 
-const resourceInterval = setInterval(() => {
-  const memoryUsage = process.memoryUsage();
-  const cpuUsage = os.loadavg()[0] / os.cpus().length * 100; // Average load / cores
+// const resourceInterval = setInterval(() => {
+//   const memoryUsage = process.memoryUsage();
+//   const cpuUsage = os.loadavg()[0] / os.cpus().length * 100; // Average load / cores
   
-  console.log(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    memory: Math.round(memoryUsage.rss / 1024 / 1024), // MB
-    cpu: Math.round(cpuUsage)
-  }));
-}, 5000);
+//   console.log(JSON.stringify({
+//     timestamp: new Date().toISOString(),
+//     memory: Math.round(memoryUsage.rss / 1024 / 1024), // MB
+//     cpu: Math.round(cpuUsage)
+//   }));
+// }, 5000);
 
 // Clear interval when done testing
 process.on('SIGINT', () => {
