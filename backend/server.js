@@ -52,7 +52,7 @@ app.get('/api/health', (req, res) => {
 // Database connection test route
 app.get('/api/test-db', async (req, res) => {
   try {
-    const pool = require('./config/database');
+    const pool = require('./src/config/database');
     const result = await pool.query('SELECT NOW()');
     res.json({ message: 'Database connected successfully', time: result.rows[0].now });
   } catch (err) {
