@@ -11,7 +11,7 @@ const port = process.env.PORT || 4000;
 const rateLimit = require('express-rate-limit');
 
 app.use(cors({
-  origin: ['https://emr-1.onrender.com','http://localhost:5173', 'http://localhost:3000', 'http://localhost:4000'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4000'],
   credentials: true
 }));
 app.use(express.json());
@@ -77,7 +77,7 @@ app.use('*', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-}).on('error', (err) => {ç
+}).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${port} is already in use. Try setting a different port using the PORT environment variable:`);
     console.error(`Example: PORT=4001 node server.js`);
@@ -86,16 +86,16 @@ app.listen(port, () => {
   }
 });
 
-const resourceInterval = setInterval(() => {
-  const memoryUsage = process.memoryUsage();
-  const cpuUsage = os.loadavg()[0] / os.cpus().length * 100; // Average load / cores
+// const resourceInterval = setInterval(() => {
+//   const memoryUsage = process.memoryUsage();
+//   const cpuUsage = os.loadavg()[0] / os.cpus().length * 100; // Average load / cores
   
-  console.log(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    memory: Math.round(memoryUsage.rss / 1024 / 1024), // MB
-    cpu: Math.round(cpuUsage)
-  }));
-}, 5000);
+//   console.log(JSON.stringify({
+//     timestamp: new Date().toISOString(),
+//     memory: Math.round(memoryUsage.rss / 1024 / 1024), // MB
+//     cpu: Math.round(cpuUsage)
+//   }));
+// }, 5000);
 
 // Clear interval when done testing
 process.on('SIGINT', () => {
