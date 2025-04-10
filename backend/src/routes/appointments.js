@@ -26,6 +26,35 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// GET user's own appointments
+router.get('/my-appointments', authenticateToken, async (req, res) => {
+  try {
+    // Get patient ID from user ID
+    const patientResult = await pool.query(
+      'SELECT PatientID FROM Patients WHERE UserID = $1',
+      [req.user.UserID]
+    );
+    
+    if (patientResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Patient profile not found' });
+    }
+    
+    const patientId = patientResult.rows[0].patientid;
+    
+    // Get appointments for this patient only
+    const appointmentsResult = await pool.query(
+      'SELECT * FROM Appointments WHERE PatientID = $1 ORDER BY AppointmentDate DESC',
+      [patientId]
+    );
+    
+    res.json(appointmentsResult.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 // POST /appointments
 // Create a new appointment
 // Requires authentication token and validates request body
