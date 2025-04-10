@@ -122,7 +122,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
  }
 });
 
-// Add this to your existing src/routes/medicalRecords.js file
 
 // GET /medical-records/patient/:patientId
 // Retrieve medical records for a specific patient
@@ -152,6 +151,34 @@ router.get('/patient/:patientId', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching patient medical records:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET user's own medical records
+router.get('/my-records', authenticateToken, async (req, res) => {
+  try {
+    // Get patient ID from user ID
+    const patientResult = await pool.query(
+      'SELECT PatientID FROM Patients WHERE UserID = $1',
+      [req.user.UserID]
+    );
+    
+    if (patientResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Patient profile not found' });
+    }
+    
+    const patientId = patientResult.rows[0].patientid;
+    
+    // Get medical records for this patient only
+    const recordsResult = await pool.query(
+      'SELECT * FROM MedicalRecords WHERE PatientID = $1 ORDER BY VisitDate DESC',
+      [patientId]
+    );
+    
+    res.json(recordsResult.rows);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
