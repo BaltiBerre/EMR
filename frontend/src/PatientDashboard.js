@@ -23,13 +23,13 @@ const PatientDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       // Fetch appointments
-      const appointmentsResponse = await axios.get(`${API_URL}/api/appointments`, { 
+      const appointmentsResponse = await axios.get(`${API_URL}/api/appointments/my-appointments`, { 
         withCredentials: true
        });
       setAppointments(appointmentsResponse.data || []);
 
       // Fetch medical records
-      const recordsResponse = await axios.get(`${API_URL}/api/medical-records`, { 
+      const recordsResponse = await axios.get(`${API_URL}/api/medical-records/my-records`, { 
         withCredentials:true });
       setMedicalRecords(recordsResponse.data || []);
 
