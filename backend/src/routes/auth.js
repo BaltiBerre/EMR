@@ -10,6 +10,10 @@ const xss = require('xss');
 
 // POST /auth/register  
 // Register a new user account
+// POST /auth/register  
+// Register a new user account and create patient profile
+// POST /auth/register  
+// Register a new user account and create patient profile
 router.post('/register', [
   // Validation middleware
   body('Username').isLength({ min: 3 }).withMessage('Username must be at least 3 characters long'),
@@ -17,7 +21,7 @@ router.post('/register', [
   body('Role').isIn(['Admin', 'Doctor', 'Patient', 'Staff']).withMessage('Invalid role')
 ], async (req, res) => {
   // Check for validation errors
-  console.log("Register request body:", req.body); // Log the incoming request
+  console.log("Register request body:", req.body);
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -28,22 +32,56 @@ router.post('/register', [
   const Password = req.body.Password; // Don't sanitize passwords
   const Role = xss(req.body.Role);
   
+  // Get patient profile data if registering as a patient
+  const isPatientRegistration = Role.toLowerCase() === 'patient';
+  
+  // Start a database transaction
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+    
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(Password, 10);
+    
     // Insert new user into database
-    const result = await pool.query(
+    const userResult = await client.query(
       'INSERT INTO UserAccounts (Username, PasswordHash, Role) VALUES ($1, $2, $3) RETURNING UserID, Username, Role',
       [Username, hashedPassword, Role]
     );
-    res.status(201).json(result.rows[0]);
+    
+    const userId = userResult.rows[0].userid;
+    
+    // If registering as a patient, create patient profile
+    if (isPatientRegistration && req.body.FirstName && req.body.LastName) {
+      // Sanitize patient data
+      const FirstName = xss(req.body.FirstName);
+      const LastName = xss(req.body.LastName);
+      const DOB = req.body.DOB;
+      const Gender = xss(req.body.Gender || 'Other');
+      const PhoneNumber = xss(req.body.PhoneNumber || '');
+      const Email = xss(req.body.Email || '');
+      const Address = xss(req.body.Address || '');
+      
+      // Create patient record with UserID linkage
+      await client.query(
+        'INSERT INTO Patients (UserID, FirstName, LastName, DOB, Gender, PhoneNumber, Email, Address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        [userId, FirstName, LastName, DOB, Gender, PhoneNumber, Email, Address]
+      );
+    }
+    
+    await client.query('COMMIT');
+    res.status(201).json(userResult.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     if (err.code === '23505') { // PostgreSQL unique constraint violation
       res.status(409).json({ error: 'Username already exists' });
     } else {
       res.status(500).json({ error: 'Internal server error', details: err.message });
     }
+  } finally {
+    client.release();
   }
 });
 
