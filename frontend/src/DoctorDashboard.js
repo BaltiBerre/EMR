@@ -1,5 +1,6 @@
 import React, { useState} from 'react';
 import PatientList from './components/PatientList';
+import Appointments from './components/Appointments';
 import { Activity, LogOut, Plus} from 'lucide-react';
 
 
@@ -46,11 +47,11 @@ function DoctorDashboard() {
           
           <button 
             className={`px-6 py-3 fontmedium ${
-                activeTab === 'appointments-list'
+                activeTab === 'appointments'
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
-              onClick={()=> setActiveTab('appointments-list')}
+              onClick={()=> setActiveTab('appointments')}
             >
               Appointments
           </button>
@@ -59,6 +60,7 @@ function DoctorDashboard() {
         {/* Content Area */}
         <div>
           {activeTab === 'patients-list' && <PatientList />}
+          {activeTab === 'appointments' && <Appointments />}
         </div>
         
       </main>
