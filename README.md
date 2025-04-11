@@ -1,70 +1,204 @@
-# Getting Started with Create React App
+# EMR Software
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive Electronic Medical Records system designed for healthcare institutions. This system helps manage patient data, medical records, appointments, and more in a secure, HIPAA-compliant environment.
 
-## Available Scripts
+## Project Overview
 
-In the project directory, you can run:
+This EMR software is an Independent Study (IS) project that implements a full-stack web application for managing healthcare data. The system provides role-based access control (admin, doctor, patient) and features for managing various aspects of patient care and administration.
 
-### `npm start`
+## Key Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **User Authentication & Authorization**: Secure login with JWT-based authentication and role-based access control
+- **Patient Management**: Add, view, update, and delete patient records
+- **Doctor Management**: Admin tools for managing healthcare providers
+- **Appointment Scheduling**: Schedule and manage patient appointments
+- **Medical Records**: Create, view, and manage patient medical history
+- **FHIR Integration**: Support for importing healthcare data in FHIR format
+- **Security Features**: HIPAA compliance measures, password hashing, XSS protection
+- **Responsive UI**: Modern interface built with React and Tailwind CSS
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Technology Stack
 
-### `npm test`
+### Backend
+- Node.js
+- Express.js
+- PostgreSQL
+- JSON Web Tokens (JWT)
+- bcrypt for password hashing
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Frontend
+- React
+- React Router
+- Axios
+- Tailwind CSS
+- Lucide React (icons)
 
-### `npm run build`
+## Project Structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+EMR/
+├── backend/
+│   ├── config/
+│   │   └── database.js
+│   ├── middleware/
+│   │   └── auth.js
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── appointments.js
+│   │   ├── doctors.js
+│   │   ├── fhirImport.js
+│   │   ├── medicalRecords.js
+│   │   ├── patients.js
+│   │   └── patientOverview.js
+│   ├── src/
+│   │   └── utils/
+│   │       └── fhirProcessor.js
+│   ├── server.js
+│   └── package.json
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── admin/
+│   │   │   │   └── DoctorManagement.js
+│   │   │   ├── Login.js
+│   │   │   ├── PatientDetails.js
+│   │   │   ├── PatientList.js
+│   │   │   ├── PatientOverview.js
+│   │   │   └── RegisterForm.js
+│   │   ├── AdminDashboard.js
+│   │   ├── App.js
+│   │   ├── DoctorDashboard.js
+│   │   ├── PatientDashboard.js
+│   │   ├── RoleBasedRouter.js
+│   │   └── index.js
+│   ├── package.json
+│   ├── tailwind.config.js
+│   └── postcss.config.js
+└── package.json
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Installation & Setup
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Prerequisites
+- Node.js (v14 or higher)
+- PostgreSQL database
+- npm or yarn
 
-### `npm run eject`
+### Backend Setup
+1. Navigate to the backend directory:
+   ```
+   cd backend
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+3. Create a `.env` file in the backend directory with the following variables:
+   ```
+   PORT=4000
+   DB_USER=your_db_username
+   DB_HOST=localhost
+   DB_NAME=emr_database
+   DB_PASSWORD=your_db_password
+   DB_PORT=5432
+   JWT_SECRET=your_secure_jwt_secret
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+4. Initialize the database:
+   ```
+   # Log into PostgreSQL
+   psql -U your_db_username
+   
+   # Create the database
+   CREATE DATABASE emr_database;
+   
+   # Connect to the database
+   \c emr_database
+   
+   # Tables will be automatically created when the server starts
+   ```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+5. Start the backend server:
+   ```
+   npm start
+   ```
 
-## Learn More
+### Frontend Setup
+1. Navigate to the frontend directory:
+   ```
+   cd frontend
+   ```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+3. Create a `.env` file in the frontend directory:
+   ```
+   REACT_APP_API_URL=http://localhost:4000
+   ```
 
-### Code Splitting
+4. Start the frontend development server:
+   ```
+   npm start
+   ```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Usage
 
-### Analyzing the Bundle Size
+### Default User Accounts
+The system comes with default test accounts for demonstration:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- **Admin**
+  - Username: admin
+  - Password: adminpassword
 
-### Making a Progressive Web App
+- **Doctor**
+  - Username: testuser
+  - Password: testpassword
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- **Patient**
+  - Username: testpatient
+  - Password: securepassword
 
-### Advanced Configuration
+### Accessing the Application
+Once both backend and frontend servers are running:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+1. Open your browser and navigate to `http://localhost:3000`
+2. Log in with one of the default accounts based on your role
+3. Use the role-specific dashboard to interact with the system features
 
-### Deployment
+## Security Considerations
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+This application implements several security features:
+- Password hashing using bcrypt
+- JWT-based authentication with HTTPOnly cookies
+- XSS protection
+- Rate limiting for login attempts
+- Input validation and sanitization
 
-### `npm run build` fails to minify
+However, for a production environment, additional security measures should be implemented:
+- HTTPS configuration
+- Enhanced audit logging
+- Regular security updates
+- Additional database security measures
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+### Adding Features
+When adding new features:
+1. Create or modify backend routes in the appropriate file
+2. Implement frontend components to interact with the API
+3. Ensure proper authentication and authorization
+4. Test across different user roles
+5. Document the changes
+
+## License
+
+I don't know just don't steal it I guess
+
+## Acknowledgments
+
+This project was developed as an Independent Study at The College of Wooster, Department of Mathematical & Computational Sciences.
