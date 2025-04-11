@@ -42,7 +42,7 @@ function DoctorDashboard() {
             }`}
               onClick={()=> setActiveTab('patients-list')}
             >
-              PatientList
+              Patient List
           </button>
           
           <button 
