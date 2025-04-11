@@ -29,6 +29,8 @@ function Login({ setIsAuthenticated, setUserRole }) {
         withCredentials: true
       });
   
+
+      
       const userRole = response.data.role.toLowerCase();
       localStorage.setItem('userRole', userRole);
       setIsAuthenticated(true);
