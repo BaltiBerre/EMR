@@ -22,6 +22,8 @@ function PatientList() {
     Email: ''
   });
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   // get userRole
   const userRole = localStorage.getItem('userRole');
 
@@ -29,6 +31,10 @@ function PatientList() {
   useEffect(() => {
     fetchPatients();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, patients]);
 
   const fetchPatients = async () => {
     try {
@@ -146,6 +152,11 @@ function PatientList() {
       (patient.phonenumber && patient.phonenumber.includes(searchQuery))
     );
   });
+
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentPatients = filteredPatients.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
 
   if (loading) return (
     <div className="flex justify-center items-center p-8">
@@ -271,8 +282,8 @@ function PatientList() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPatients.length > 0 ? (
-                filteredPatients.map(patient => (
+              {currentPatients.length > 0 ? (
+                currentPatients.map(patient => (
                   <tr key={patient.patientid} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
@@ -337,6 +348,77 @@ function PatientList() {
           </table>
         </div>
       </div>
+      {/* Pagination Controls */}
+           {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-4 px-6">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredPatients.length)} of {filteredPatients.length} patients
+              </div> 
+              <div className="flex space-x-2 px-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+
+                {/* Always show the first page */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className={`px-3 py-1 border border-gray-300 rounded-md ${
+                    currentPage === 1 ? 'bg-blue-600 text-white' : 'text-gray-700'
+                  }`}
+                >
+                  1
+                </button>
+
+                {/* Show ellipsis if there's a gap between page 1 and the pages around currentPage */}
+                {currentPage > 3 && <span className="px-3 py-1 text-gray-700">...</span>}
+
+                {/* Show pages around the current page */}
+                {Array.from(
+                  { length: 3 },
+                  (_, i) => currentPage - 1 + i
+                )
+                  .filter(page => page > 1 && page < totalPages)
+                  .map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 border border-gray-300 rounded-md ${
+                        currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                {/* Show ellipsis if there's a gap between the pages around currentPage and the last page */}
+                {currentPage < totalPages - 2 && <span className="px-3 py-1 text-gray-700">...</span>}
+
+                {/* Always show the last page */}
+                {totalPages > 1 && (
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    className={`px-3 py-1 border border-gray-300 rounded-md ${
+                      currentPage === totalPages ? 'bg-blue-600 text-white' : 'text-gray-700'
+                    }`}
+                  >
+                    {totalPages}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
 
       {/* Add Patient Modal */}
       {showAddForm && (
@@ -405,10 +487,12 @@ function PatientList() {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Non-Binary">Non-Binary</option>
+                  <option value="Genderqueer">Genderqueer</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                   </select>
                 </div>
                 
@@ -436,7 +520,7 @@ function PatientList() {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
-                  />
+                  />  
                 </div>
                 
                 <div className="md:col-span-2">
