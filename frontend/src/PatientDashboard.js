@@ -22,24 +22,33 @@ const PatientDashboard = () => {
   // fetches data from backend, async so to not crash immediately and lets know that there's wait time
   const fetchDashboardData = async () => {
     try {
-      // Fetch appointments
+      console.log('Attempting to fetch patient appointments from:', `${API_URL}/api/appointments/my-appointments`);
+      
+      // Use our new patient-specific endpoints
       const appointmentsResponse = await axios.get(`${API_URL}/api/appointments/my-appointments`, { 
         withCredentials: true
-       });
+      });
+      
+      console.log('Appointments response:', appointmentsResponse.data);
       setAppointments(appointmentsResponse.data || []);
-
-      // Fetch medical records
+  
+      // Fetch patient-specific medical records
+      console.log('Attempting to fetch medical records from:', `${API_URL}/api/medical-records/my-records`);
       const recordsResponse = await axios.get(`${API_URL}/api/medical-records/my-records`, { 
-        withCredentials:true });
+        withCredentials: true 
+      });
+      
+      console.log('Medical records response:', recordsResponse.data);
       setMedicalRecords(recordsResponse.data || []);
-
-      // sets the loading to false
+  
       setLoading(false);
-
-      // if any error arises logs it to the console
-      // and 
     } catch (err) {
       console.error('Dashboard fetch error:', err);
+      // Additional debugging information
+      console.error('Error details:', err.response?.data || 'No response data');
+      console.error('Error status:', err.response?.status);
+      console.error('Request URL:', err.config?.url);
+      
       setError('Failed to load dashboard data. Please try again.');
       setLoading(false);
     }
