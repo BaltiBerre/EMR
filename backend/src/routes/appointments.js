@@ -215,6 +215,11 @@ router.post('/', [
   }
 });
 
+
+
+
+
+
 // DELETE /appointments/:id
 // Delete/cancel an appointment
 // Requires authentication token
