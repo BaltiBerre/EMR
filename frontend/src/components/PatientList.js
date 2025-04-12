@@ -39,10 +39,16 @@ function PatientList() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-
-      const response = await axios.get(`${API_URL}/api/patients`, {
-        withCredentials: true // This enables sending cookies with the request
+      
+      // Different endpoints based on user role
+      const endpoint = userRole === 'doctor' 
+        ? `${API_URL}/api/doctors/my-patients` 
+        : `${API_URL}/api/patients`;
+        
+      const response = await axios.get(endpoint, {
+        withCredentials: true
       });
+      
       setPatients(response.data);
       setLoading(false);
     } catch (err) {
