@@ -1,4 +1,4 @@
-import React, { useState} from 'react';
+import React, {useState} from 'react';
 import PatientList from './components/PatientList';
 import Appointments from './components/Appointments';
 import { Activity, LogOut, Plus} from 'lucide-react';
@@ -6,6 +6,8 @@ import { Activity, LogOut, Plus} from 'lucide-react';
 
 function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState('patients-list');
+
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* top navigation bar */}
