@@ -6,6 +6,166 @@ const authenticateToken = require('../middleware/auth'); // JWT authentication
 const { body, validationResult } = require('express-validator');
 
 
+// POST /doctors/:doctorid/patients/:patientid
+// Assign a patient to a doctor
+router.post('/:doctorid/patients/:patientid', authenticateToken, async (req, res) => {
+  try {
+    // Check for admin privileges
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can assign patients to doctors' });
+    }
+    
+    const { doctorid, patientid } = req.params;
+    
+    // Insert relationship record
+    const result = await pool.query(
+      'INSERT INTO doctor_patient_relationships(doctor_id, patient_id) VALUES($1, $2) RETURNING *',
+      [doctorid, patientid]
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error assigning patient to doctor:', err);
+    
+    if (err.code === '23505') { // Unique violation
+      return res.status(409).json({ message: 'Patient is already assigned to this doctor' });
+    }
+    
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+// GET /doctors/:doctorid/patients
+// Get all patients assigned to a doctor
+router.get('/:doctorid/patients', authenticateToken, async (req, res) => {
+  try {
+    const { doctorid } = req.params;
+    
+    // Get patients assigned to doctor
+    const result = await pool.query(
+      `SELECT p.* FROM patients p
+       JOIN doctor_patient_relationships r ON p.patientid = r.patient_id
+       WHERE r.doctor_id = $1 AND r.status = 'Active'
+       ORDER BY p.lastname, p.firstname`,
+      [doctorid]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching doctor\'s patients:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+// DELETE /doctors/:doctorid/patients/:patientid
+// Remove a patient assignment from a doctor
+router.delete('/:doctorid/patients/:patientid', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can remove patient assignments' });
+    }
+    
+    const { doctorid, patientid } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM doctor_patient_relationships WHERE doctor_id = $1 AND patient_id = $2 RETURNING *',
+      [doctorid, patientid]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Relationship not found' });
+    }
+    
+    res.json({ message: 'Patient unassigned successfully' });
+  } catch (err) {
+    console.error('Error removing patient assignment:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+// POST /doctors/:doctorid/patients/bulk
+// Bulk assign patients to a doctor
+router.post('/:doctorid/patients/bulk', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can assign patients to doctors' });
+    }
+    
+    const { doctorid } = req.params;
+    const { patientIds } = req.body;
+    
+    if (!Array.isArray(patientIds) || patientIds.length === 0) {
+      return res.status(400).json({ message: 'Patient IDs array is required' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Use a single query with unnest for better performance
+      const result = await client.query(
+        `INSERT INTO doctor_patient_relationships(doctor_id, patient_id)
+         SELECT $1, p FROM unnest($2::int[]) AS p
+         ON CONFLICT (doctor_id, patient_id) DO NOTHING
+         RETURNING *`,
+        [doctorid, patientIds]
+      );
+      
+      await client.query('COMMIT');
+      
+      res.status(201).json({
+        message: `${result.rows.length} patients assigned successfully`,
+        relationships: result.rows
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error bulk assigning patients:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+// GET /doctors/my-patients
+// Get patients assigned to the currently logged-in doctor
+router.get('/my-patients', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.Role.toLowerCase() !== 'doctor') {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    // First get the doctor's ID from their user ID
+    const doctorResult = await pool.query(
+      'SELECT doctorid FROM doctors WHERE userid = $1',
+      [req.user.UserID]
+    );
+    
+    if (doctorResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Doctor profile not found' });
+    }
+    
+    const doctorId = doctorResult.rows[0].doctorid;
+    
+    // Get patients assigned to this doctor
+    const result = await pool.query(
+      `SELECT p.* FROM patients p
+       JOIN doctor_patient_relationships r ON p.patientid = r.patient_id
+       WHERE r.doctor_id = $1 AND r.status = 'Active'
+       ORDER BY p.lastname, p.firstname`,
+      [doctorId]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching doctor\'s patients:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
 // GET /doctors
 // Get all doctors with their patient and appointment statistics
 // Requires admin privileges
