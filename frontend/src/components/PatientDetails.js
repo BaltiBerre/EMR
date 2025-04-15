@@ -17,6 +17,9 @@ function PatientDetails({ patient, onBack, userRole }) {
     notes: '',
     visitdate: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
   });
+  const [assignedDoctor, setAssignedDoctor] = useState(null);
+
+
   
   const isDoctor = userRole === 'doctor';
   
@@ -24,12 +27,14 @@ function PatientDetails({ patient, onBack, userRole }) {
     console.log('PatientDetails component mounted with patient ID:', patient.patientid);
     console.log('User role:', userRole);
     fetchMedicalRecords();
+    fetchAssignedDoctor(); // Add this line
     
     // Add cleanup function
     return () => {
       console.log('PatientDetails component unmounting');
     };
   }, [patient.patientid]);
+
   
   const fetchMedicalRecords = async () => {
     try {
@@ -49,6 +54,22 @@ function PatientDetails({ patient, onBack, userRole }) {
       setLoading(false);
     }
   };
+
+  const fetchAssignedDoctor = async () => {
+    try {
+      console.log(`Attempting to fetch assigned doctor for patient ID: ${patient.patientid}`);
+      const response = await axios.get(`${API_URL}/api/patients/${patient.patientid}/doctor`, {
+        withCredentials: true
+      });
+      console.log('Assigned doctor data:', response.data);
+      setAssignedDoctor(response.data);
+    } catch (err) {
+      console.error('Error fetching assigned doctor:', err);
+      // Not setting an error state here, as it's not critical functionality
+    }
+  };
+  
+  
   
   const handleInputChange = (e) => {
     setNewRecord({ ...newRecord, [e.target.name]: e.target.value });
@@ -56,8 +77,12 @@ function PatientDetails({ patient, onBack, userRole }) {
   
   const handleAddRecord = async (e) => {
     e.preventDefault();
+    console.log('[DEBUG] Add record form submitted');
+    console.log('[DEBUG] New record data:', newRecord);
+    console.log('[DEBUG] Patient ID:', patient.patientid);
+    
     try {
-      console.log('Attempting to add new medical record:', {
+      console.log('[DEBUG] Preparing to add medical record with data:', {
         PatientID: patient.patientid,
         VisitDate: newRecord.visitdate,
         Diagnosis: newRecord.diagnosis,
@@ -75,7 +100,7 @@ function PatientDetails({ patient, onBack, userRole }) {
         withCredentials: true
       });
       
-      console.log('Medical record added successfully:', response.data);
+      console.log('[DEBUG] Medical record added successfully:', response.data);
       
       // Reset form and fetch updated records
       setNewRecord({
@@ -87,19 +112,28 @@ function PatientDetails({ patient, onBack, userRole }) {
       setShowAddRecordForm(false);
       fetchMedicalRecords();
     } catch (err) {
-      console.error('Error adding medical record:', err);
-      console.error('Error response:', err.response?.data || err.message);
-      console.error('Error status:', err.response?.status);
-      console.error('Request payload:', {
+      console.error('[ERROR] Adding medical record failed:', err);
+      console.error('[ERROR] Error response:', err.response?.data || 'No response data');
+      console.error('[ERROR] Error status:', err.response?.status);
+      console.error('[ERROR] Request payload:', {
         PatientID: patient.patientid,
         VisitDate: newRecord.visitdate,
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
         Notes: newRecord.notes
       });
-      setError('Failed to add medical record. Please try again.');
+      
+      // Set more descriptive error message based on the error type
+      if (err.response?.status === 403) {
+        setError('Permission denied. Only doctors can add medical records.');
+      } else if (err.response?.status === 400) {
+        setError(`Validation error: ${err.response.data.message || 'Please check form inputs'}`);
+      } else {
+        setError('Failed to add medical record. Please try again.');
+      }
     }
   };
+  
   
   const handleEditRecord = (record) => {
     setEditingRecordId(record.recordid);
@@ -111,10 +145,15 @@ function PatientDetails({ patient, onBack, userRole }) {
     });
   };
   
+
   const handleUpdateRecord = async (recordId) => {
+    console.log('[DEBUG] Update record initiated for recordId:', recordId);
+    console.log('[DEBUG] Updated record data:', newRecord);
+    
     try {
-      console.log(`Attempting to update medical record ID: ${recordId}`, {
+      console.log(`[DEBUG] Attempting to update medical record ID: ${recordId}`, {
         PatientID: patient.patientid,
+        DoctorID: null, // This will be determined by the backend based on the authenticated user
         VisitDate: newRecord.visitdate,
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
@@ -123,6 +162,7 @@ function PatientDetails({ patient, onBack, userRole }) {
       
       const response = await axios.put(`${API_URL}/api/medical-records/${recordId}`, {
         PatientID: patient.patientid,
+        DoctorID: null, // Server will use the authenticated doctor's ID
         VisitDate: newRecord.visitdate,
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
@@ -131,40 +171,77 @@ function PatientDetails({ patient, onBack, userRole }) {
         withCredentials: true
       });
       
-      console.log('Medical record updated successfully:', response.data);
+      console.log('[DEBUG] Medical record updated successfully:', response.data);
       
       setEditingRecordId(null);
+      setNewRecord({
+        diagnosis: '',
+        treatment: '',
+        notes: '',
+        visitdate: new Date().toISOString().split('T')[0]
+      });
       fetchMedicalRecords();
     } catch (err) {
-      console.error(`Error updating medical record ID: ${recordId}`, err);
-      console.error('Error response:', err.response?.data || err.message);
-      console.error('Error status:', err.response?.status);
-      setError('Failed to update medical record. Please try again.');
+      console.error(`[ERROR] Updating medical record ID: ${recordId} failed`, err);
+      console.error('[ERROR] Error response:', err.response?.data || 'No response data');
+      console.error('[ERROR] Error status:', err.response?.status);
+      console.error('[ERROR] Request URL:', `${API_URL}/api/medical-records/${recordId}`);
+      
+      // Set more descriptive error message based on the error type
+      if (err.response?.status === 403) {
+        setError('Permission denied. You cannot update this medical record.');
+      } else if (err.response?.status === 404) {
+        setError('Medical record not found. It may have been deleted.');
+        // Reset edit mode and refresh records
+        setEditingRecordId(null);
+        fetchMedicalRecords();
+      } else if (err.response?.status === 400) {
+        setError(`Validation error: ${err.response.data.message || 'Please check form inputs'}`);
+      } else {
+        setError('Failed to update medical record. Please try again.');
+      }
     }
   };
   
+  
   const handleDeleteRecord = async (recordId) => {
+    console.log('[DEBUG] Delete record initiated for recordId:', recordId);
+    
     if (!window.confirm('Are you sure you want to delete this medical record? This action cannot be undone.')) {
+      console.log('[DEBUG] Delete operation canceled by user');
       return;
     }
     
     try {
-      console.log(`Attempting to delete medical record ID: ${recordId}`);
+      console.log(`[DEBUG] Attempting to delete medical record ID: ${recordId}`);
       
       const response = await axios.delete(`${API_URL}/api/medical-records/${recordId}`, {
         withCredentials: true
       });
       
-      console.log('Medical record deleted successfully:', response.data);
+      console.log('[DEBUG] Medical record deleted successfully:', response.data);
       
+      // Set a success message before refreshing records
+      setError(null); // Clear any existing errors
       fetchMedicalRecords();
     } catch (err) {
-      console.error(`Error deleting medical record ID: ${recordId}`, err);
-      console.error('Error response:', err.response?.data || err.message);
-      console.error('Error status:', err.response?.status);
-      setError('Failed to delete medical record. Please try again.');
+      console.error(`[ERROR] Deleting medical record ID: ${recordId} failed`, err);
+      console.error('[ERROR] Error response:', err.response?.data || 'No response data');
+      console.error('[ERROR] Error status:', err.response?.status);
+      console.error('[ERROR] Request URL:', `${API_URL}/api/medical-records/${recordId}`);
+      
+      // Set more descriptive error message based on the error type
+      if (err.response?.status === 403) {
+        setError('Permission denied. You cannot delete this medical record.');
+      } else if (err.response?.status === 404) {
+        setError('Medical record not found. It may have been already deleted.');
+        fetchMedicalRecords(); // Refresh the list to ensure UI is in sync
+      } else {
+        setError('Failed to delete medical record. Please try again.');
+      }
     }
   };
+  
   
   const handleCancelEdit = () => {
     setEditingRecordId(null);
@@ -233,6 +310,21 @@ function PatientDetails({ patient, onBack, userRole }) {
                     <p className="font-medium">{patient.address}</p>
                   </div>
                 )}
+                {assignedDoctor && (
+                  <div className="md:col-span-2 mt-3">
+                    <p className="text-sm text-gray-600">Assigned Doctor</p>
+                    <p className="font-medium">
+                      Dr. {assignedDoctor.firstname} {assignedDoctor.lastname}
+                      {assignedDoctor.specialty && ` (${assignedDoctor.specialty})`}
+                    </p>
+                  </div>
+                )}
+                {!assignedDoctor && (
+                  <div className="md:col-span-2 mt-3">
+                    <p className="text-sm text-gray-600">Assigned Doctor</p>
+                    <p className="text-gray-500 italic">No doctor assigned</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -276,31 +368,34 @@ function PatientDetails({ patient, onBack, userRole }) {
                           name="visitdate"
                           value={newRecord.visitdate}
                           onChange={handleInputChange}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                        />
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                      />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Diagnosis
+                          Diagnosis <span className="text-red-500">*</span>
                         </label>
                         <input
-                          type="text"
-                          name="diagnosis"
-                          value={newRecord.diagnosis}
-                          onChange={handleInputChange}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                        />
+                            type="text"
+                            name="diagnosis"
+                            value={newRecord.diagnosis}
+                            onChange={handleInputChange}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Treatment
+                          Treatment <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           name="treatment"
                           value={newRecord.treatment}
                           onChange={handleInputChange}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
                         />
                       </div>
                       <div>
@@ -312,19 +407,26 @@ function PatientDetails({ patient, onBack, userRole }) {
                           value={newRecord.notes}
                           onChange={handleInputChange}
                           rows="3"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         ></textarea>
                       </div>
                       <div className="flex justify-end space-x-2">
-                        <button
-                          onClick={handleCancelEdit}
-                          className="px-3 py-1 border border-gray-300 rounded-md text-gray-700"
+                      <button
+                          onClick={() => {
+                            console.log('[DEBUG] Edit canceled for record:', record.recordid);
+                            handleCancelEdit();
+                            setError(null); // Clear any errors
+                          }}
+                          className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                         >
                           Cancel
                         </button>
                         <button
-                          onClick={() => handleUpdateRecord(record.recordid)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                          onClick={() => {
+                            console.log('[DEBUG] Save changes initiated for record:', record.recordid);
+                            handleUpdateRecord(record.recordid);
+                          }}
+                          className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                           <Save size={16} className="mr-1" />
                           Save
@@ -403,7 +505,6 @@ function PatientDetails({ patient, onBack, userRole }) {
           )}
         </div>
       </div>
-      
       {/* Add Medical Record Form Modal */}
       {showAddRecordForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -411,54 +512,74 @@ function PatientDetails({ patient, onBack, userRole }) {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">Add Medical Record</h3>
               <button 
-                onClick={() => setShowAddRecordForm(false)}
+                onClick={() => {
+                  console.log('[DEBUG] Add record form closed');
+                  setShowAddRecordForm(false);
+                  setError(null); // Clear any errors when closing form
+                }}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <X size={24} />
               </button>
             </div>
             
+            {/* Add form-specific error display */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
+                {error}
+                <button 
+                  onClick={() => setError(null)} 
+                  className="float-right text-red-400 hover:text-red-600"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+            
             <form onSubmit={handleAddRecord}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Visit Date
+                    Visit Date <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     name="visitdate"
                     value={newRecord.visitdate}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
+                  <p className="text-xs text-gray-500 mt-1">Format: YYYY-MM-DD</p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Diagnosis
+                    Diagnosis <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="diagnosis"
                     value={newRecord.diagnosis}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
+                    placeholder="Enter primary diagnosis"
                   />
                 </div>
                 
                 <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Treatment
+                    Treatment <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="treatment"
                     value={newRecord.treatment}
                     onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
+                    placeholder="Enter prescribed treatment"
                   />
                 </div>
                 
@@ -471,7 +592,8 @@ function PatientDetails({ patient, onBack, userRole }) {
                     value={newRecord.notes}
                     onChange={handleInputChange}
                     rows="3"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Additional observations or instructions (optional)"
                   ></textarea>
                 </div>
               </div>
@@ -479,14 +601,18 @@ function PatientDetails({ patient, onBack, userRole }) {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddRecordForm(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
+                  onClick={() => {
+                    console.log('[DEBUG] Add record form canceled');
+                    setShowAddRecordForm(false);
+                    setError(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Add Record
                 </button>

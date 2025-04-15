@@ -36,6 +36,41 @@ function PatientList() {
     setCurrentPage(1);
   }, [searchQuery, patients]);
 
+    // Calculate page range to display
+    const getPageRange = () => {
+      const delta = 1; // Number of pages to show before and after current page
+      let range = [];
+      
+      // Always include first page
+      range.push(1);
+      
+      // Calculate start and end of page range around current page
+      const rangeStart = Math.max(2, currentPage - delta);
+      const rangeEnd = Math.min(totalPages - 1, currentPage + delta);
+      
+      // Add ellipsis after first page if needed
+      if (rangeStart > 2) {
+        range.push('...');
+      }
+      
+      // Add pages around current page
+      for (let i = rangeStart; i <= rangeEnd; i++) {
+        range.push(i);
+      }
+      
+      // Add ellipsis before last page if needed
+      if (rangeEnd < totalPages - 1) {
+        range.push('...');
+      }
+      
+      // Always include last page if it exists
+      if (totalPages > 1) {
+        range.push(totalPages);
+      }
+      
+      return range;
+    };
+
   const fetchPatients = async () => {
     try {
       setLoading(true);
@@ -354,77 +389,56 @@ function PatientList() {
           </table>
         </div>
       </div>
-      {/* Pagination Controls */}
-           {totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4 px-6">
-              <div className="text-sm text-gray-600">
-                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredPatients.length)} of {filteredPatients.length} patients
-              </div> 
-              <div className="flex space-x-2 px-2">
+{/* Pagination Controls */}
+{totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4 px-6">
+          <div className="text-sm text-gray-600">
+            Showing {indexOfFirstItem + 1}-
+            {Math.min(indexOfLastItem, filteredPatients.length)} of {filteredPatients.length} patients
+          </div>
+          
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
+              disabled={currentPage === 1}
+              className="p-2 rounded-md border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Previous page"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            
+            {getPageRange().map((page, index) => (
+              page === '...' ? (
+                <span key={`ellipsis-${index}`} className="px-3 py-2">...</span>
+              ) : (
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 disabled:opacity-50"
-                >
-                  Previous
-                </button>
-
-                {/* Always show the first page */}
-                <button
-                  onClick={() => setCurrentPage(1)}
-                  className={`px-3 py-1 border border-gray-300 rounded-md ${
-                    currentPage === 1 ? 'bg-blue-600 text-white' : 'text-gray-700'
+                  key={`page-${page}`}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-3 py-1 rounded-md ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white'
+                      : 'border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  1
+                  {page}
                 </button>
-
-                {/* Show ellipsis if there's a gap between page 1 and the pages around currentPage */}
-                {currentPage > 3 && <span className="px-3 py-1 text-gray-700">...</span>}
-
-                {/* Show pages around the current page */}
-                {Array.from(
-                  { length: 3 },
-                  (_, i) => currentPage - 1 + i
-                )
-                  .filter(page => page > 1 && page < totalPages)
-                  .map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 border border-gray-300 rounded-md ${
-                        currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-
-                {/* Show ellipsis if there's a gap between the pages around currentPage and the last page */}
-                {currentPage < totalPages - 2 && <span className="px-3 py-1 text-gray-700">...</span>}
-
-                {/* Always show the last page */}
-                {totalPages > 1 && (
-                  <button
-                    onClick={() => setCurrentPage(totalPages)}
-                    className={`px-3 py-1 border border-gray-300 rounded-md ${
-                      currentPage === totalPages ? 'bg-blue-600 text-white' : 'text-gray-700'
-                    }`}
-                  >
-                    {totalPages}
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+              )
+            ))}
+            
+            <button
+              onClick={() => setCurrentPage(currentPage < totalPages ? currentPage + 1 : totalPages)}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-md border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Next page"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+          </div>
+        </div>
+      )}
 
       {/* Add Patient Modal */}
       {showAddForm && (
