@@ -132,28 +132,55 @@ router.get('/patient/:patientId', authenticateToken, async (req, res) => {
     // Get user role from JWT token
     const userRole = req.user.Role.toLowerCase();
     
-    let query;
+    // Admin can see all records
+    if (userRole === 'admin') {
+      const result = await pool.query(
+        'SELECT * FROM MedicalRecords WHERE PatientID = $1 ORDER BY VisitDate DESC',
+        [patientId]
+      );
+      return res.json(result.rows);
+    }
     
-    // If user is a doctor, fetch all fields
+    // If doctor, check if patient is assigned to them
     if (userRole === 'doctor') {
-      query = 'SELECT * FROM MedicalRecords WHERE PatientID = $1 ORDER BY VisitDate DESC';
-    } 
-    // If user is an admin, fetch limited information
-    else if (userRole === 'admin') {
-      query = 'SELECT RecordID, PatientID, DoctorID, VisitDate, Diagnosis FROM MedicalRecords WHERE PatientID = $1 ORDER BY VisitDate DESC';
-    }
-    // Other roles have no access
-    else {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      // Get doctor ID
+      const doctorResult = await pool.query(
+        'SELECT doctorid FROM doctors WHERE userid = $1',
+        [req.user.UserID]
+      );
+      
+      if (doctorResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Doctor profile not found' });
+      }
+      
+      const doctorId = doctorResult.rows[0].doctorid;
+      
+      // Check if patient is assigned to this doctor
+      const relationshipResult = await pool.query(
+        'SELECT * FROM doctor_patient_relationships WHERE doctor_id = $1 AND patient_id = $2 AND status = $3',
+        [doctorId, patientId, 'Active']
+      );
+      
+      if (relationshipResult.rows.length === 0) {
+        return res.status(403).json({ error: 'You do not have access to this patient\'s records' });
+      }
+      
+      // Patient is assigned, fetch records
+      const result = await pool.query(
+        'SELECT * FROM MedicalRecords WHERE PatientID = $1 ORDER BY VisitDate DESC',
+        [patientId]
+      );
+      return res.json(result.rows);
     }
     
-    const result = await pool.query(query, [patientId]);
-    res.json(result.rows);
+    // Other roles have no access
+    return res.status(403).json({ error: 'Insufficient permissions' });
   } catch (err) {
     console.error('Error fetching patient medical records:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // GET user's own medical records
 router.get('/my-records', authenticateToken, async (req, res) => {
