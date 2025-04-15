@@ -1,4 +1,4 @@
-// Login.js
+//Login.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -29,10 +29,15 @@ function Login({ setIsAuthenticated, setUserRole }) {
         withCredentials: true
       });
   
-
-      
+      // Get user information from response
       const userRole = response.data.role.toLowerCase();
+      const userInfo = response.data.user || {};
+      
+      // Store user info and role in localStorage
       localStorage.setItem('userRole', userRole);
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      
+      // Update authentication state
       setIsAuthenticated(true);
       setUserRole(userRole);
   
@@ -51,6 +56,7 @@ function Login({ setIsAuthenticated, setUserRole }) {
     } catch (err) {
       console.error('Login error:', err);
       setError(
+        err.response?.data?.error || 
         err.response?.data?.message || 
         'Login failed. Please try again.'
       );
