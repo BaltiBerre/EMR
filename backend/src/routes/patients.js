@@ -126,6 +126,11 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     // First delete associated appointments
     await pool.query('DELETE FROM Appointments WHERE PatientID = $1', [id]);
+    // then deletes from relationship table
+    await pool.query('DELETE FROM doctor_patient_relationships WHERE doctor_patient_relationships.patient_id = $1', [id]);
+
+    await pool.query('DELETE FROM medicalrecords WHERE medicalrecords.patientid = $1', [id]);
+
     
    // Attempt to delete patient
    const result = await pool.query('DELETE FROM Patients WHERE PatientID = $1 RETURNING *', [id]);
@@ -144,6 +149,30 @@ router.delete('/:id', authenticateToken, async (req, res) => {
    }
  }
 });
+
+// GET /patients/:id/doctor
+// Get the doctor assigned to a specific patient
+router.get('/:id/doctor', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT d.doctorid, d.firstname, d.lastname, d.specialization 
+      FROM doctors d
+      JOIN doctor_patient_relationships dpr ON d.doctorid = dpr.doctor_id
+      WHERE dpr.patient_id = $1
+    `, [id]);
+    
+    if (result.rows.length > 0) {
+      res.json(result.rows[0]);
+    } else {
+      res.json(null); // No doctor assigned
+    }
+  } catch (err) {
+    console.error('Error fetching patient\'s doctor:', err);
+    res.status(500).json({ message: 'Error fetching patient\'s doctor' });
+  }
+});
+
 
 // Export router for use in main application
 module.exports = router;
