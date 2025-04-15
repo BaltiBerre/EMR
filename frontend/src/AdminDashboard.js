@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Activity, LogOut, Plus } from 'lucide-react';
 import PatientList from './components/PatientList';
-import PatientOverview from './components/PatientOverview';
 import DoctorManagement from './components/admin/DoctorManagement';
 
 
