@@ -6,6 +6,54 @@ const authenticateToken = require('../middleware/auth'); // JWT authentication
 const { body, validationResult } = require('express-validator');
 
 
+// POST /doctors/:doctorid/patients/bulk
+// Bulk assign patients to a doctor
+// i have to reorder
+router.post('/:doctorid/patients/bulk', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can assign patients to doctors' });
+    }
+    
+    const { doctorid } = req.params;
+    const { patientIds } = req.body;
+    
+    if (!Array.isArray(patientIds) || patientIds.length === 0) {
+      return res.status(400).json({ message: 'Patient IDs array is required' });
+    }
+    
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Use a single query with unnest for better performance
+      const result = await client.query(
+        `INSERT INTO doctor_patient_relationships(doctor_id, patient_id, status)
+         SELECT $1, p, 'Active' FROM unnest($2::int[]) AS p
+         ON CONFLICT (doctor_id, patient_id) DO UPDATE SET status = 'Active'
+         RETURNING *`,
+        [doctorid, patientIds]
+      );
+      
+      await client.query('COMMIT');
+      
+      res.status(201).json({
+        message: `${result.rows.length} patients assigned successfully`,
+        relationships: result.rows
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error bulk assigning patients:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
 // POST /doctors/:doctorid/patients/:patientid
 // Assign a patient to a doctor
 router.post('/:doctorid/patients/:patientid', authenticateToken, async (req, res) => {
@@ -83,52 +131,7 @@ router.delete('/:doctorid/patients/:patientid', authenticateToken, async (req, r
   }
 });
 
-// POST /doctors/:doctorid/patients/bulk
-// Bulk assign patients to a doctor
-router.post('/:doctorid/patients/bulk', authenticateToken, async (req, res) => {
-  try {
-    if (req.user.Role.toLowerCase() !== 'admin') {
-      return res.status(403).json({ message: 'Only admins can assign patients to doctors' });
-    }
-    
-    const { doctorid } = req.params;
-    const { patientIds } = req.body;
-    
-    if (!Array.isArray(patientIds) || patientIds.length === 0) {
-      return res.status(400).json({ message: 'Patient IDs array is required' });
-    }
-    
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-      
-      // Use a single query with unnest for better performance
-      const result = await client.query(
-        `INSERT INTO doctor_patient_relationships(doctor_id, patient_id)
-         SELECT $1, p FROM unnest($2::int[]) AS p
-         ON CONFLICT (doctor_id, patient_id) DO NOTHING
-         RETURNING *`,
-        [doctorid, patientIds]
-      );
-      
-      await client.query('COMMIT');
-      
-      res.status(201).json({
-        message: `${result.rows.length} patients assigned successfully`,
-        relationships: result.rows
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    console.error('Error bulk assigning patients:', err);
-    res.status(500).json({ error: 'Internal server error', details: err.message });
-  }
-});
+
 
 // GET /doctors/my-patients
 // Get patients assigned to the currently logged-in doctor
@@ -217,44 +220,58 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 
   try {
+    const doctorId = req.params.id;
+    
+    // Get doctor's user ID first
+    const doctorQuery = await pool.query(
+      'SELECT UserID FROM Doctors WHERE DoctorID = $1',
+      [doctorId]
+    );
+    
+    if (doctorQuery.rows.length === 0) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    
+    const userId = doctorQuery.rows[0].userid;
+
     // Query to get doctor's statistics
     const statsQuery = `
-    SELECT 
-      COUNT(DISTINCT a.PatientID) as unique_patients,
-      COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,
-      COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
-    FROM Doctors d
-    LEFT JOIN Appointments a ON d.DoctorID = a.DoctorID
-    WHERE d.UserID = $1
-    GROUP BY d.DoctorID;
-  `;
-  
+      SELECT 
+        COUNT(DISTINCT a.PatientID) as unique_patients,
+        COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,
+        COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
+      FROM Doctors d
+      LEFT JOIN Appointments a ON d.DoctorID = a.DoctorID
+      WHERE d.DoctorID = $1
+      GROUP BY d.DoctorID;
+    `;
 
-    // Query to get detailed patient information for the doctor
+    // Query to get patients assigned to this doctor with detailed information
     const patientsQuery = `
-    SELECT DISTINCT ON (p.PatientID)
-      p.PatientID as patientid,
-      p.FirstName as firstname,
-      p.LastName as lastname,
-      MAX(mr.VisitDate) as last_visit,
-      COUNT(mr.RecordID) as visit_count,
-      FIRST_VALUE(mr.Diagnosis) OVER (
-        PARTITION BY p.PatientID 
-        ORDER BY mr.VisitDate DESC
-      ) as latest_diagnosis
-    FROM Patients p
-    JOIN Appointments a ON p.PatientID = a.PatientID
-    LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID
-    JOIN Doctors d ON a.DoctorID = d.DoctorID
-    WHERE d.UserID = $1
-    GROUP BY p.PatientID, mr.Diagnosis, mr.VisitDate
-    ORDER BY p.PatientID, last_visit DESC;
-  `;
-  
+      SELECT 
+        p.PatientID as patientid,
+        p.FirstName as firstname,
+        p.LastName as lastname,
+        MAX(mr.VisitDate) as last_visit,
+        COUNT(mr.RecordID) as visit_count,
+        (
+          SELECT Diagnosis 
+          FROM MedicalRecords 
+          WHERE PatientID = p.PatientID 
+          ORDER BY VisitDate DESC 
+          LIMIT 1
+        ) as latest_diagnosis
+      FROM Patients p
+      JOIN doctor_patient_relationships dpr ON p.PatientID = dpr.patient_id
+      LEFT JOIN MedicalRecords mr ON p.PatientID = mr.PatientID
+      WHERE dpr.doctor_id = $1 AND dpr.status = 'Active'
+      GROUP BY p.PatientID, p.FirstName, p.LastName
+      ORDER BY p.LastName, p.FirstName;
+    `;
 
     // Execute both queries
-    const stats = await pool.query(statsQuery, [req.params.id]);
-    const patients = await pool.query(patientsQuery, [req.params.id]);
+    const stats = await pool.query(statsQuery, [doctorId]);
+    const patients = await pool.query(patientsQuery, [doctorId]);
 
     // Combine results and send response
     res.json({
@@ -263,13 +280,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
         completed_appointments: 0,
         upcoming_appointments: 0
       },
-      patients: patients.rows
+      patients: patients.rows || []
     });
   } catch (error) {
     console.error('Error fetching doctor details:', error);
     res.status(500).json({ message: 'Error fetching doctor details', error: error.message });
   }
 });
+
+
+
+
 
 // DELETE /doctors/:id
 // DELETE a doctor record
@@ -371,6 +392,28 @@ router.post('/', [
     // General error (moved inside catch block and fixed variable name)
     return res.status(500).json({message: "Failed to create doctor record", error: err.message});
    }
+});
+
+router.get('/:doctorid/unassigned-patients', authenticateToken, async (req, res) => {
+  try {
+    const { doctorid } = req.params;
+    
+    // Get patients not assigned to this doctor
+    const result = await pool.query(`
+      SELECT p.* FROM patients p
+      WHERE p.patientid NOT IN (
+        SELECT r.patient_id FROM doctor_patient_relationships r
+        WHERE r.doctor_id = $1 AND r.status = 'Active'
+      )
+      ORDER BY p.lastname, p.firstname`,
+      [doctorid]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching unassigned patients:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
 });
 
 
