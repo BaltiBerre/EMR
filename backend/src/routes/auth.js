@@ -122,19 +122,82 @@ router.post('/login', [
       if (isMatch) {
         // Normalize role to lowercase
         const userRole = user.role ? String(user.role).toLowerCase() : 'user';
+        
+        // Retrieve additional user information based on role
+        let userInfo = { id: user.userid, username: user.username, role: userRole };
+        
+        // Get additional user profile information based on role
+        try {
+          if (userRole === 'doctor') {
+            const doctorResult = await pool.query(
+              'SELECT firstname, lastname FROM doctors WHERE userid = $1',
+              [user.userid]
+            );
+            
+            if (doctorResult.rows.length > 0) {
+              userInfo.firstname = doctorResult.rows[0].firstname;
+              userInfo.lastname = doctorResult.rows[0].lastname;
+              userInfo.fullname = `${doctorResult.rows[0].firstname} ${doctorResult.rows[0].lastname}`;
+            }
+          } else if (userRole === 'patient') {
+            const patientResult = await pool.query(
+              'SELECT firstname, lastname FROM patients WHERE userid = $1',
+              [user.userid]
+            );
+            
+            if (patientResult.rows.length > 0) {
+              userInfo.firstname = patientResult.rows[0].firstname;
+              userInfo.lastname = patientResult.rows[0].lastname;
+              userInfo.fullname = `${patientResult.rows[0].firstname} ${patientResult.rows[0].lastname}`;
+            }
+          } else if (userRole === 'admin') {
+            // For admin users, we might not have a separate profile table
+            // You can either add an admin_profiles table or just use username
+            userInfo.fullname = user.username; // Default for admin if no profile exists
+            
+            // If you have an admin profile table, uncomment this code:
+            /*
+            const adminResult = await pool.query(
+              'SELECT firstname, lastname FROM admin_profiles WHERE userid = $1',
+              [user.userid]
+            );
+            
+            if (adminResult.rows.length > 0) {
+              userInfo.firstname = adminResult.rows[0].firstname;
+              userInfo.lastname = adminResult.rows[0].lastname;
+              userInfo.fullname = `${adminResult.rows[0].firstname} ${adminResult.rows[0].lastname}`;
+            }
+            */
+          }
+        } catch (profileErr) {
+          console.error('Error retrieving user profile:', profileErr);
+          // Continue with login even if profile retrieval fails
+        }
 
         // Generate JWT token with user information
         const token = jwt.sign(
-          { UserID: user.userid, Username: user.username, Role: user.role },
+          { 
+            UserID: user.userid, 
+            Username: user.username, 
+            Role: user.role,
+            // Optionally include name in token if needed for middleware
+            FirstName: userInfo.firstname,
+            LastName: userInfo.lastname
+          },
           process.env.JWT_SECRET,
           { expiresIn: '1h' }
         );
+        
         res.cookie('token', token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production', // Only use HTTPS in production
           sameSite: 'strict',
           maxAge: 3600000 // 1 hour in milliseconds
-        }).json({ message: 'Login successful', role: user.role.toLowerCase() });
+        }).json({ 
+          message: 'Login successful', 
+          role: userRole,
+          user: userInfo
+        });
       } else {
         res.status(401).json({ error: 'Invalid credentials' });
       }
@@ -146,6 +209,7 @@ router.post('/login', [
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
+
 
 // POST /auth/logout
 // Clear authentication cookie
