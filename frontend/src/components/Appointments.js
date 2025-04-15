@@ -23,7 +23,7 @@ function Appointments() {
       patientID: '',
       doctorID: '',
       appointmentDate: '',
-      appointmentTime: '',
+      AppointmentTime: new Date().toTimeString().slice(0, 5),
       reasonForVisit: '',
       status: ''
     });
@@ -33,7 +33,7 @@ function Appointments() {
     // Form state for new appointment
     const [newAppointment, setNewAppointment] = useState({
         PatientID: '',
-        AppointmentDate: '',
+        AppointmentDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
         AppointmentTime: '',
         ReasonForVisit: '',
         Status: 'Pending'
@@ -93,7 +93,7 @@ function Appointments() {
 
     const fetchPatients = async () => {
         try {
-            const response = await axios.get(`${API_URL}/api/patients`, {
+            const response = await axios.get(`${API_URL}/api/doctors/my-patients`, {
             withCredentials: true
         });
             setPatients(response.data);
@@ -155,8 +155,8 @@ function Appointments() {
           // Reset form and fetch updated appointments
           setNewAppointment({
             PatientID: '',
-            AppointmentDate: '',
-            AppointmentTime: '',
+            AppointmentDate: new Date().toISOString().split('T')[0], // Keep default date as today
+            AppointmentTime: new Date().toTimeString().slice(0, 5),
             ReasonForVisit: '',
             Status: 'Pending'
           });
