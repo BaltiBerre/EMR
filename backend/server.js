@@ -1,4 +1,4 @@
-// console log just to confirm that server is running proper
+// EMR/backend/server.js
 console.log('Starting server...');
 const express = require('express');
 const cors = require('cors');
@@ -9,13 +9,41 @@ const os = require('os');
 const app = express();
 const port = process.env.PORT || 4000;
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:4000'],
   credentials: true
 }));
+
 app.use(express.json());
 app.use(cookieParser());
+
+// User ID extraction middleware (runs before auditLogger)
+// This will attempt to extract user information from the JWT token
+// and make it available to subsequent middleware
+app.use('/api', (req, res, next) => {
+  if (req.cookies && req.cookies.token) {
+    try {
+      const decoded = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+      // Create req.tokenUser property to store the user info from token
+      req.tokenUser = {
+        userId: decoded.UserID,
+        username: decoded.Username,
+        role: decoded.Role
+      };
+      console.log('Token user info extracted:', req.tokenUser);
+    } catch (err) {
+      console.error('Token verification failed:', err.message);
+      // Continue processing even if token verification fails
+    }
+  }
+  next();
+});
+
+// Now the auditLogger comes after token extraction
+const auditLogger = require('./src/middleware/auditlogger');
+app.use('/api', auditLogger);
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -31,7 +59,6 @@ const patientsRouter = require('./src/routes/patients');
 const appointmentsRouter = require('./src/routes/appointments');
 const authRouter = require('./src/routes/auth');
 const medicalRecordsRouter = require('./src/routes/medicalRecords');
-const patientOverviewRouter = require('./src/routes/patientOverview');
 const fhirImportRouter = require(path.join(__dirname, './src/routes/fhirImport'));
 
 // Use routes
@@ -40,7 +67,7 @@ app.use('/api/patients', patientsRouter);
 app.use('/api/appointments', appointmentsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/medical-records', medicalRecordsRouter);
-app.use('/api/patient-overview', patientOverviewRouter);
+
 app.use('/api/fhir', fhirImportRouter);
 app.use('/api/doctors', doctorsRouter);
 
@@ -61,15 +88,6 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// Serve static files from the React app
-// app.use(express.static(path.join(__dirname, '..', '..', 'frontend', 'build')));
-
-// // The "catchall" handler: for any request that doesn't
-// // match one above, send back React's index.html file.
-// app.get('*', (req, res) => {
-//   res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'build', 'index.html'));
-// });
-
 // Temporary API 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ message: 'API endpoint not found' });
@@ -86,19 +104,6 @@ app.listen(port, () => {
   }
 });
 
-// const resourceInterval = setInterval(() => {
-//   const memoryUsage = process.memoryUsage();
-//   const cpuUsage = os.loadavg()[0] / os.cpus().length * 100; // Average load / cores
-  
-//   console.log(JSON.stringify({
-//     timestamp: new Date().toISOString(),
-//     memory: Math.round(memoryUsage.rss / 1024 / 1024), // MB
-//     cpu: Math.round(cpuUsage)
-//   }));
-// }, 5000);
-
-// Clear interval when done testing
 process.on('SIGINT', () => {
-  clearInterval(resourceInterval);
   process.exit();
 });
