@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import PatientList from './components/PatientList';
 import Appointments from './components/Appointments';
 import { Activity, LogOut, Plus} from 'lucide-react';
@@ -6,7 +6,19 @@ import { Activity, LogOut, Plus} from 'lucide-react';
 
 function DoctorDashboard() {
   const [activeTab, setActiveTab] = useState('patients-list');
-
+  const [userInfo, setUserInfo] = useState(null);
+  
+  useEffect(() => {
+    // Get user info from localStorage when component mounts
+    const storedUserInfo = localStorage.getItem('userInfo');
+    if (storedUserInfo) {
+      try {
+        setUserInfo(JSON.parse(storedUserInfo));
+      } catch (e) {
+        console.error("Error parsing user info:", e);
+      }
+    }
+  }, []);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,6 +44,9 @@ function DoctorDashboard() {
         {/* Dashboard Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900"> Doctor Dashboard</h1>
+          <h2 className="text-lg text-gray-700"> 
+            Hello Dr. {userInfo ? (userInfo.lastname || '') : ''}
+          </h2>
         </div>
 
         {/*Navigation Tabs */}
