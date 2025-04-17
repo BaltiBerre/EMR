@@ -1,7 +1,7 @@
 // src/components/PatientDetails.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ChevronLeft, Calendar, FilePlus, Edit, Trash, Save, X } from 'lucide-react';
+import { ChevronLeft, Calendar, FilePlus, Edit, Trash, Save, X, ChevronRight, ChevronUp } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -18,33 +18,49 @@ function PatientDetails({ patient, onBack, userRole }) {
     visitdate: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
   });
   const [assignedDoctor, setAssignedDoctor] = useState(null);
-
-
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const recordsPerPage = 5; // Number of records per page
   
   const isDoctor = userRole === 'doctor';
   
   useEffect(() => {
     console.log('PatientDetails component mounted with patient ID:', patient.patientid);
     console.log('User role:', userRole);
-    fetchMedicalRecords();
-    fetchAssignedDoctor(); // Add this line
+    fetchMedicalRecords(currentPage);
+    fetchAssignedDoctor();
     
     // Add cleanup function
     return () => {
       console.log('PatientDetails component unmounting');
     };
-  }, [patient.patientid]);
+  }, [patient.patientid, currentPage]);
 
   
-  const fetchMedicalRecords = async () => {
+  const fetchMedicalRecords = async (page = 1) => {
     try {
       setLoading(true);
-      console.log(`Attempting to fetch medical records for patient ID: ${patient.patientid}`);
-      const response = await axios.get(`${API_URL}/api/medical-records/patient/${patient.patientid}`, {
-        withCredentials: true
-      });
+      console.log(`Attempting to fetch medical records for patient ID: ${patient.patientid}, page: ${page}`);
+      
+      const response = await axios.get(
+        `${API_URL}/api/medical-records/patient/${patient.patientid}`, 
+        {
+          params: { page, limit: recordsPerPage },
+          withCredentials: true
+        }
+      );
+      
       console.log('Medical records fetched successfully:', response.data);
-      setMedicalRecords(response.data);
+      
+      // Update state with records and pagination info
+      setMedicalRecords(response.data.records || []);
+      setCurrentPage(response.data.pagination.currentPage);
+      setTotalPages(response.data.pagination.totalPages);
+      setTotalRecords(response.data.pagination.totalRecords);
+      
       setLoading(false);
     } catch (err) {
       console.error('Error fetching medical records:', err);
@@ -110,7 +126,9 @@ function PatientDetails({ patient, onBack, userRole }) {
         visitdate: new Date().toISOString().split('T')[0]
       });
       setShowAddRecordForm(false);
-      fetchMedicalRecords();
+      // Go to first page to see the new record
+      setCurrentPage(1);
+      fetchMedicalRecords(1);
     } catch (err) {
       console.error('[ERROR] Adding medical record failed:', err);
       console.error('[ERROR] Error response:', err.response?.data || 'No response data');
@@ -151,9 +169,13 @@ function PatientDetails({ patient, onBack, userRole }) {
     console.log('[DEBUG] Updated record data:', newRecord);
     
     try {
+      // Get the doctor ID for this record (assuming it's stored in the current record)
+      const currentRecord = medicalRecords.find(record => record.recordid === recordId);
+      const doctorId = currentRecord?.doctorid;
+      
       console.log(`[DEBUG] Attempting to update medical record ID: ${recordId}`, {
         PatientID: patient.patientid,
-        DoctorID: null, // This will be determined by the backend based on the authenticated user
+        DoctorID: doctorId,
         VisitDate: newRecord.visitdate,
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
@@ -162,7 +184,7 @@ function PatientDetails({ patient, onBack, userRole }) {
       
       const response = await axios.put(`${API_URL}/api/medical-records/${recordId}`, {
         PatientID: patient.patientid,
-        DoctorID: null, // Server will use the authenticated doctor's ID
+        DoctorID: doctorId,
         VisitDate: newRecord.visitdate,
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
@@ -180,7 +202,7 @@ function PatientDetails({ patient, onBack, userRole }) {
         notes: '',
         visitdate: new Date().toISOString().split('T')[0]
       });
-      fetchMedicalRecords();
+      fetchMedicalRecords(currentPage);
     } catch (err) {
       console.error(`[ERROR] Updating medical record ID: ${recordId} failed`, err);
       console.error('[ERROR] Error response:', err.response?.data || 'No response data');
@@ -194,7 +216,7 @@ function PatientDetails({ patient, onBack, userRole }) {
         setError('Medical record not found. It may have been deleted.');
         // Reset edit mode and refresh records
         setEditingRecordId(null);
-        fetchMedicalRecords();
+        fetchMedicalRecords(currentPage);
       } else if (err.response?.status === 400) {
         setError(`Validation error: ${err.response.data.message || 'Please check form inputs'}`);
       } else {
@@ -223,7 +245,18 @@ function PatientDetails({ patient, onBack, userRole }) {
       
       // Set a success message before refreshing records
       setError(null); // Clear any existing errors
-      fetchMedicalRecords();
+      
+      // Recalculate what page to show after deletion
+      const remainingRecords = totalRecords - 1;
+      const newTotalPages = Math.ceil(remainingRecords / recordsPerPage);
+      
+      // If we deleted the last record on the last page, go to previous page
+      if (currentPage > newTotalPages && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+        fetchMedicalRecords(currentPage - 1);
+      } else {
+        fetchMedicalRecords(currentPage);
+      }
     } catch (err) {
       console.error(`[ERROR] Deleting medical record ID: ${recordId} failed`, err);
       console.error('[ERROR] Error response:', err.response?.data || 'No response data');
@@ -235,7 +268,7 @@ function PatientDetails({ patient, onBack, userRole }) {
         setError('Permission denied. You cannot delete this medical record.');
       } else if (err.response?.status === 404) {
         setError('Medical record not found. It may have been already deleted.');
-        fetchMedicalRecords(); // Refresh the list to ensure UI is in sync
+        fetchMedicalRecords(currentPage); // Refresh the list to ensure UI is in sync
       } else {
         setError('Failed to delete medical record. Please try again.');
       }
@@ -251,6 +284,31 @@ function PatientDetails({ patient, onBack, userRole }) {
       notes: '',
       visitdate: new Date().toISOString().split('T')[0]
     });
+  };
+  
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+  
+  // Generate array of page numbers to display
+  const getPageNumbers = () => {
+    // If 5 or fewer pages, show all
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    
+    // Calculate range based on current page
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    // Adjust if we're near the end
+    if (endPage === totalPages) {
+      startPage = Math.max(1, endPage - 4);
+    }
+    
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
   };
   
   return (
@@ -333,7 +391,61 @@ function PatientDetails({ patient, onBack, userRole }) {
         {/* Medical Records Section */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Medical Records</h3>
+            <div className="flex items-center space-x-4">
+              <h3 className="text-xl font-semibold">Medical Records</h3>
+              
+              {/* Pagination Controls - Displayed on the same line as the header */}
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className={`p-1 rounded ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:bg-blue-50'}`}
+                  >
+                    <ChevronLeft size={16} />
+                    <ChevronLeft size={16} className="-ml-3" />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`p-1 rounded ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:bg-blue-50'}`}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  
+                  {getPageNumbers().map(pageNum => (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-8 h-8 rounded-full ${
+                        pageNum === currentPage 
+                          ? 'bg-blue-600 text-white' 
+                          : 'text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`p-1 rounded ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:bg-blue-50'}`}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className={`p-1 rounded ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:bg-blue-50'}`}
+                  >
+                    <ChevronRight size={16} />
+                    <ChevronRight size={16} className="-ml-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+            
             {isDoctor && (
               <button
                 onClick={() => setShowAddRecordForm(true)}
@@ -473,12 +585,14 @@ function PatientDetails({ patient, onBack, userRole }) {
                             <button
                               onClick={() => handleEditRecord(record)}
                               className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                              title="Edit record"
                             >
                               <Edit size={18} />
                             </button>
                             <button
                               onClick={() => handleDeleteRecord(record.recordid)}
                               className="p-1 text-red-600 hover:bg-red-50 rounded"
+                              title="Delete record"
                             >
                               <Trash size={18} />
                             </button>
@@ -503,8 +617,36 @@ function PatientDetails({ patient, onBack, userRole }) {
               )}
             </div>
           )}
+          
+          {/* Pagination footer - for mobile or when there are many pages */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex justify-center md:hidden">
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:bg-blue-50'}`}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                
+                <span className="mx-2 text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:bg-blue-50'}`}
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      
       {/* Add Medical Record Form Modal */}
       {showAddRecordForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -569,7 +711,7 @@ function PatientDetails({ patient, onBack, userRole }) {
                 </div>
                 
                 <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Treatment <span className="text-red-500">*</span>
                   </label>
                   <input
