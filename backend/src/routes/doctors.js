@@ -9,6 +9,7 @@ const { body, validationResult } = require('express-validator');
 // POST /doctors/:doctorid/patients/bulk
 // Bulk assign patients to a doctor
 // i have to reorder
+// POST /doctors/:doctorid/patients/bulk
 router.post('/:doctorid/patients/bulk', authenticateToken, async (req, res) => {
   try {
     if (req.user.Role.toLowerCase() !== 'admin') {
@@ -27,7 +28,28 @@ router.post('/:doctorid/patients/bulk', authenticateToken, async (req, res) => {
     try {
       await client.query('BEGIN');
       
-      // Use a single query with unnest for better performance
+      // Check if any of these patients are already assigned to another doctor
+      const existingAssignments = await client.query(
+        `SELECT patient_id, doctor_id FROM doctor_patient_relationships 
+         WHERE patient_id = ANY($1::int[]) AND status = 'Active'`,
+        [patientIds]
+      );
+      
+      // Filter out patients who are already assigned to other doctors
+      const alreadyAssignedPatients = existingAssignments.rows
+        .filter(row => row.doctor_id != doctorid) // Only concerned about different doctors
+        .map(row => row.patient_id);
+      
+      if (alreadyAssignedPatients.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          message: 'Some patients are already assigned to other doctors',
+          alreadyAssignedPatients
+        });
+      }
+      
+      // Single query with unnest for better performance
+      // This will only insert patients not already assigned to this doctor
       const result = await client.query(
         `INSERT INTO doctor_patient_relationships(doctor_id, patient_id, status)
          SELECT $1, p, 'Active' FROM unnest($2::int[]) AS p
@@ -64,6 +86,18 @@ router.post('/:doctorid/patients/:patientid', authenticateToken, async (req, res
     }
     
     const { doctorid, patientid } = req.params;
+
+    const existingAssignment = await pool.query(
+      'SELECT * FROM doctor_patient_relationships WHERE patient_id = $1 AND status = $2',
+      [patientid, 'Active']
+    );
+
+    if (existingAssignment.rows > 0) {
+      return res.status(400).json({
+        message: 'This patient is already assigned to a doctor',
+        currentDoctorId: existingAssignment.rows[0].doctorId
+      })
+    }
     
     // Insert relationship record
     const result = await pool.query(
@@ -192,7 +226,7 @@ router.get('/', authenticateToken, async (req, res) => {
         d.firstname,
         d.lastname,
         d.specialization,
-        COUNT(DISTINCT a.PatientID) as patient_count,
+        (SELECT COUNT(*) FROM doctor_patient_relationships WHERE doctor_id = d.doctorid AND status = 'Active') as patient_count,
         COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
       FROM Doctors d
       JOIN UserAccounts ua ON d.userid = ua.userid
@@ -236,15 +270,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     // Query to get doctor's statistics
     const statsQuery = `
-      SELECT 
-        COUNT(DISTINCT a.PatientID) as unique_patients,
-        COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,
-        COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
-      FROM Doctors d
-      LEFT JOIN Appointments a ON d.DoctorID = a.DoctorID
-      WHERE d.DoctorID = $1
-      GROUP BY d.DoctorID;
-    `;
+    SELECT 
+      (SELECT COUNT(*) FROM doctor_patient_relationships WHERE doctor_id = $1 AND status = 'Active') as unique_patients,
+      COUNT(CASE WHEN a.Status = 'Completed' THEN 1 END) as completed_appointments,
+      COUNT(CASE WHEN a.AppointmentDate >= CURRENT_DATE THEN 1 END) as upcoming_appointments
+    FROM Doctors d
+    LEFT JOIN Appointments a ON d.DoctorID = a.DoctorID
+    WHERE d.DoctorID = $1
+    GROUP BY d.DoctorID;
+  `;
 
     // Query to get patients assigned to this doctor with detailed information
     const patientsQuery = `
@@ -398,15 +432,15 @@ router.get('/:doctorid/unassigned-patients', authenticateToken, async (req, res)
   try {
     const { doctorid } = req.params;
     
-    // Get patients not assigned to this doctor
+    // Get patients not assigned to ANY doctor (truly unassigned)
     const result = await pool.query(`
       SELECT p.* FROM patients p
       WHERE p.patientid NOT IN (
         SELECT r.patient_id FROM doctor_patient_relationships r
-        WHERE r.doctor_id = $1 AND r.status = 'Active'
+        WHERE r.status = 'Active'
       )
       ORDER BY p.lastname, p.firstname`,
-      [doctorid]
+      []
     );
     
     res.json(result.rows);
