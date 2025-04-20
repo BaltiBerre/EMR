@@ -111,11 +111,26 @@ function DoctorManagement() {
       setLoading(false);
     } catch (err) {
       console.error('Error assigning patients:', err);
-      setError('Failed to assign patients to doctor: ' + (err.response?.data?.message || err.message));
+      
+      // Check if error is due to patients already assigned to other doctors
+      if (err.response?.status === 409 && err.response.data?.alreadyAssignedPatients) {
+        // Get the list of already assigned patient IDs
+        const alreadyAssigned = err.response.data.alreadyAssignedPatients;
+        
+        // Get the names of these patients for better user feedback
+        const assignedNames = allPatients
+          .filter(p => alreadyAssigned.includes(p.patientid))
+          .map(p => `${p.firstname} ${p.lastname}`)
+          .join(', ');
+        
+        setError(`The following patients are already assigned to other doctors: ${assignedNames}`);
+      } else {
+        setError('Failed to assign patients to doctor: ' + (err.response?.data?.message || err.message));
+      }
+      
       setLoading(false);
     }
   };
-  
   // Fetch doctors list
   const fetchDoctors = async () => {
     try {
