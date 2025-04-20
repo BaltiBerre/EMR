@@ -8,10 +8,7 @@ const { body, validationResult } = require('express-validator');  // Request val
 const { pool } = require('../config/database');          // Database connection pool
 const xss = require('xss');
 
-// POST /auth/register  
-// Register a new user account
-// POST /auth/register  
-// Register a new user account and create patient profile
+
 // POST /auth/register  
 // Register a new user account and create patient profile
 router.post('/register', [
