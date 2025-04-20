@@ -79,7 +79,13 @@ function RegisterForm({ onToggleForm, setIsAuthenticated, setUserRole }) {
       
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      
+      // Check for specific duplicate username error
+      if (err.response?.status === 409) {
+        setError('Username already exists. Please choose a different username.');
+      } else {
+        setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
