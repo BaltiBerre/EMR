@@ -106,6 +106,9 @@ function PatientList() {
   }
 
   const handlePatientSelection = (patientId) => {
+    // Prevent doctors from selecting patients (for deletion)
+    if (userRole === 'doctor') return;
+    
     setSelectedPatients(prev => 
       prev.includes(patientId) 
         ? prev.filter(id => id !== patientId)
@@ -114,6 +117,9 @@ function PatientList() {
   };
 
   const handleSelectAll = () => {
+    // Prevent doctors from selecting all patients
+    if (userRole === 'doctor') return;
+    
     if (selectedPatients.length === filteredPatients.length) {
       setSelectedPatients([]);
     } else {
@@ -127,6 +133,12 @@ function PatientList() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+      // Prevent doctors from adding patients
+  if (userRole === 'doctor') {
+    setError('You do not have permission to add patients.');
+    return;
+  }
     try {
 
       await axios.post(`${API_URL}/api/patients`, newPatient, {
@@ -150,6 +162,11 @@ function PatientList() {
   };
 
   const handleDelete = async (patientId) => {
+
+    if (userRole === 'doctor') {
+      setError('You do not have permission to delete patients.');
+      return;
+    }
     try {
       await axios.delete(`${API_URL}/api/patients/${patientId}`, {
         withCredentials: true
@@ -164,6 +181,12 @@ function PatientList() {
   };
 
   const handleBatchDelete = async () => {
+    // Prevent doctors from deleting patients
+    if (userRole === 'doctor') {
+      setError('You do not have permission to delete patients.');
+      return;
+    }
+    
     try {
       // Use Promise.all to delete multiple patients in parallel
       await Promise.all(
@@ -281,7 +304,7 @@ function PatientList() {
           </div>
           
           <div className="flex space-x-3 w-full md:w-auto justify-end">
-            {selectedPatients.length > 0 && (
+            {selectedPatients.length > 0 && userRole !== 'doctor' && (
               <button
                 onClick={() => setConfirmDelete('batch')}
                 className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -290,7 +313,7 @@ function PatientList() {
                 Delete Selected ({selectedPatients.length})
               </button>
             )}
-            
+              {userRole !== 'doctor' && (
             <button
               onClick={() => setShowAddForm(true)}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -298,6 +321,7 @@ function PatientList() {
               <UserPlus size={16} className="mr-2" />
               Add Patient
             </button>
+              )}
           </div>
         </div>
 
@@ -306,17 +330,19 @@ function PatientList() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left">
-                  <div className="flex items-center">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedPatients.length === filteredPatients.length && filteredPatients.length > 0}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300 mr-2"
-                    />
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Name</span>
-                  </div>
-                </th>
+              <th className="px-4 py-3 text-left">
+                    <div className="flex items-center">
+                      {userRole !== 'doctor' && (
+                        <input 
+                          type="checkbox" 
+                          checked={selectedPatients.length === filteredPatients.length && filteredPatients.length > 0}
+                          onChange={handleSelectAll}
+                          className="rounded border-gray-300 mr-2"
+                        />
+                      )}
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Name</span>
+                    </div>
+                  </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Demographics</th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -328,12 +354,14 @@ function PatientList() {
                   <tr key={patient.patientid} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedPatients.includes(patient.patientid)}
-                          onChange={() => handlePatientSelection(patient.patientid)}
-                          className="rounded border-gray-300 mr-3"
-                        />
+                        {userRole !== 'doctor' && (
+                          <input
+                            type="checkbox"
+                            checked={selectedPatients.includes(patient.patientid)}
+                            onChange={() => handlePatientSelection(patient.patientid)}
+                            className="rounded border-gray-300 mr-3"
+                          />
+                        )}
                         <div>
                           <div className="font-medium text-gray-900">{patient.firstname} {patient.lastname}</div>
                           {patient.email && (
@@ -357,23 +385,26 @@ function PatientList() {
                       <div className="text-sm text-gray-500">{patient.gender}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-center flex items-center justify-center space-x-2">
-                    {/* View Details button */}
-                    <button
-                      onClick={() => handleViewDetails(patient)}
-                      className="text-blue-600 hover:text-blue-900"
-                      title="View Patient Details"
-                    >
-                      <FileText size={18} />
-                    </button>
-                    
-                    <button
-                      onClick={() => setConfirmDelete(patient.patientid)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Delete Patient"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
+                      {/* View Details button - always visible */}
+                      <button
+                        onClick={() => handleViewDetails(patient)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="View Patient Details"
+                      >
+                        <FileText size={18} />
+                      </button>
+                      
+                      {/* Delete button - only visible for non-doctors */}
+                      {userRole !== 'doctor' && (
+                        <button
+                          onClick={() => setConfirmDelete(patient.patientid)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete Patient"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
