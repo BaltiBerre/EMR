@@ -1,5 +1,12 @@
 const jwt = require('jsonwebtoken');
 
+// authenticates token
+//    looks for token in the cookie
+//    if token missing sends 401
+//    if token there tries to verify using jwt.verify
+//    if verification fails sends 403 response
+//    
+
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
   

@@ -1,6 +1,20 @@
 // src/middleware/auditLogger.js
 const { pool } = require('../config/database');
 
+// This is the middleware responsible for auditing and tracking every time any API call happens
+// It's implemented at the start right before any of the other routes in the server.js file
+
+// The following tracks 
+//    when the request happened
+//    which user made it
+//    what route was hit
+//    which table affected
+//    what action type (UPDATE or READ)
+//    what the request body contained
+//    whether it succeded (based on http status)
+
+
+
 const auditLogger = async (req, res, next) => {
   // Store the original send method
   const originalSend = res.send;

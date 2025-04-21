@@ -229,7 +229,7 @@ function Appointments() {
   // Filter appointments based on search query
   const filteredAppointments = appointments.filter(appointment => {
     // We'll need to fetch patient details for each appointment to make this work better
-    // For now, we'll just filter by date and status
+    // For now, ima just filter by date and status
     return (
       appointment.appointmentdate?.includes(searchQuery) ||
       appointment.status?.toLowerCase().includes(searchQuery.toLowerCase())

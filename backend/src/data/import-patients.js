@@ -1,23 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
 
-// Configure database connection
-// const pool = new Pool({
-//   connectionString: 'postgresql://postgres:emrsoftware19314#@db.hozuxtthcvidzjiqious.supabase.co:5432/postgres'
-// });
+// Here's what this file does
 
-// const pool = new Pool({
-//     user: 'postgres',
-//     password: 'emrsoftware19314#',
-//     host: 'db.hozuxtthcvidzjiqious.supabase.co',
-//     port: 5432,
-//     database: 'postgres'
-//   });
 
-const pool = new Pool({
-    connectionString: 'postgresql://postgres:Emrsoftware19314%23@postgres.hozuxtthcvidzjiqious.supabase.co:5432/postgres'
-  });
+
+
+
 // Process FHIR patient data
 async function importPatients() {
   try {
