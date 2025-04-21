@@ -1,9 +1,0 @@
-Checking security headers...
-
-Tested server response headers:
-- X-Content-Type-Options: nosniff ✓
-- X-Frame-Options: DENY ✓
-- Content-Security-Policy: Missing ✗
-- Strict-Transport-Security: Missing ✗
-
-Recommendation: Implement Content-Security-Policy and HSTS headers.

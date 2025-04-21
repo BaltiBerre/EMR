@@ -15,6 +15,7 @@ const { pool } = require('../config/database');
 
 
 
+
 const auditLogger = async (req, res, next) => {
   // Store the original send method
   const originalSend = res.send;
@@ -79,7 +80,7 @@ const auditLogger = async (req, res, next) => {
       // Extract the resource from the path
       const pathParts = path.split('/');
       if (pathParts.length < 3) return 'unknown';
-      
+
       // Map API endpoints to database tables more accurately
       const endpointToTable = {
         'patients': 'Patients',
