@@ -194,24 +194,39 @@ function DoctorManagement() {
     
     try {
       setLoading(true);
-  
-      // First try to delete doctor record
-      if (doctorid) {
-        try {
-          await axios.delete(`${API_URL}/api/doctors/${doctorid}`, {
-            withCredentials: true
-          });
-        } catch (err) {
-          console.error("Error deleting doctor record:", err);
-        }
+      setError(null);
+      
+      // Clean up all dependencies in a single API call
+      try {
+        const cleanupResponse = await axios.post(`${API_URL}/api/doctors/${doctorid}/cleanup-dependencies`, {}, {
+          withCredentials: true
+        });
+        console.log('Cleanup response:', cleanupResponse.data);
+      } catch (err) {
+        console.error("Error cleaning up doctor dependencies:", err);
+        setError(`Failed to clean up doctor dependencies: ${err.response?.data?.details || err.message}`);
+        setLoading(false);
+        return;
       }
       
-      // Then delete user account
+      // Delete the doctor record
+      try {
+        await axios.delete(`${API_URL}/api/doctors/${doctorid}`, {
+          withCredentials: true
+        });
+      } catch (err) {
+        console.error("Error deleting doctor record:", err);
+        setError("Failed to delete doctor record after dependency cleanup");
+        setLoading(false);
+        return;
+      }
+      
+      // Delete the user account
       await axios.delete(`${API_URL}/api/auth/users/${userid}`, {
-        withCredentials: true
+          withCredentials: true
       });
-    
-      // Update doctors list and reset selected doctor if it was deleted
+      
+      // Update doctors list
       await fetchDoctors();
       if (selectedDoctor && selectedDoctor.doctorInfo && selectedDoctor.doctorInfo.doctorid === doctorid) {
         setSelectedDoctor(null);
@@ -219,12 +234,11 @@ function DoctorManagement() {
       
     } catch (err) {
       console.error('Error deleting doctor:', err);
-      setError('Failed to delete doctor');
+      setError('Failed to delete doctor: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
-
   // Create a new doctor
   const handleCreateDoctor = async (e) => {
     e.preventDefault();

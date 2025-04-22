@@ -38,6 +38,54 @@ const authenticateToken = require('../middleware/auth');
 // Helps prevent SQL injection and ensures data integrity
 const { body, validationResult } = require('express-validator');
 
+router.post('/:doctorid/cleanup-dependencies', authenticateToken, async (req, res) => {
+  // Admin-only operation
+  if (req.user.Role.toLowerCase() !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can perform this operation' });
+  }
+  
+  const { doctorid } = req.params;
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // 1. Remove doctor-patient relationships
+    const relationshipsResult = await client.query(
+      'DELETE FROM doctor_patient_relationships WHERE doctor_id = $1 RETURNING *',
+      [doctorid]
+    );
+    
+    // 2. Update appointments to set doctorid to NULL
+    const appointmentsResult = await client.query(
+      'UPDATE appointments SET doctorid = NULL WHERE doctorid = $1 RETURNING *',
+      [doctorid]
+    );
+    
+    // 3. Update medical records to set doctorid to NULL
+    const medicalRecordsResult = await client.query(
+      'UPDATE medicalrecords SET doctorid = NULL WHERE doctorid = $1 RETURNING *',
+      [doctorid]
+    );
+    
+    await client.query('COMMIT');
+    
+    res.json({
+      message: 'Doctor dependencies cleaned up successfully',
+      relationshipsRemoved: relationshipsResult.rowCount,
+      appointmentsUpdated: appointmentsResult.rowCount,
+      medicalRecordsUpdated: medicalRecordsResult.rowCount
+    });
+    
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error cleaning up doctor dependencies:', err);
+    res.status(500).json({ error: 'Failed to clean up doctor dependencies', details: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 /**
  * POST /doctors/:doctorid/patients/bulk
  * Bulk assign multiple patients to a single doctor
@@ -223,6 +271,37 @@ router.get('/:doctorid/patients', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error fetching doctor\'s patients:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
+
+router.delete('/:doctorid/unassign-all-patients', authenticateToken, async (req, res) => {
+  try {
+    // Admin-only operation
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can remove patient assignments' });
+    }
+    
+    const { doctorid } = req.params;
+    console.log(`Attempting to remove all patient relationships for doctor ${doctorid}`);
+    
+    // Delete all relationships for this doctor
+    const result = await pool.query(
+      'DELETE FROM doctor_patient_relationships WHERE doctor_id = $1 RETURNING *',
+      [doctorid]
+    );
+    
+    console.log(`Successfully removed ${result.rowCount} patient relationships`);
+    res.json({ 
+      message: `${result.rowCount} patient assignments removed successfully`,
+      relationships: result.rows
+    });
+  } catch (err) {
+    console.error('Error removing patient assignments:', err);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: err.message,
+      stack: err.stack // Include stack trace for debugging
+    });
   }
 });
 
@@ -586,6 +665,62 @@ router.post('/', [
     
     // General error handling for other database errors
     return res.status(500).json({message: "Failed to create doctor record", error: err.message});
+  }
+});
+
+
+router.delete('/:doctorid/patients/all', authenticateToken, async (req, res) => {
+  try {
+    // Admin-only operation
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can remove patient assignments' });
+    }
+    
+    const { doctorid } = req.params;
+    console.log(`Attempting to remove all patient relationships for doctor ${doctorid}`);
+    
+    // Delete all relationships for this doctor
+    const result = await pool.query(
+      'DELETE FROM doctor_patient_relationships WHERE doctor_id = $1 RETURNING *',
+      [doctorid]
+    );
+    
+    console.log(`Successfully removed ${result.rowCount} patient relationships`);
+    res.json({ 
+      message: `${result.rowCount} patient assignments removed successfully`,
+      relationships: result.rows
+    });
+  } catch (err) {
+    console.error('Error removing patient assignments:', err);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: err.message,
+      stack: err.stack // Include stack trace for debugging
+    });
+  }
+});
+
+router.put('/appointments/doctor/:doctorid/reassign', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.Role.toLowerCase() !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can reassign appointments' });
+    }
+    
+    const { doctorid } = req.params;
+    
+    // Update all appointments to set doctorid to NULL
+    const result = await pool.query(
+      'UPDATE appointments SET doctorid = NULL WHERE doctorid = $1 RETURNING *',
+      [doctorid]
+    );
+    
+    res.json({ 
+      message: `${result.rowCount} appointments updated successfully`,
+      appointments: result.rows
+    });
+  } catch (err) {
+    console.error('Error reassigning appointments:', err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });
 

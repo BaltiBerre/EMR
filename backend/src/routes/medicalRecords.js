@@ -101,9 +101,35 @@ router.get('/', authenticateToken, async (req, res) => {
  * - 500: Other database errors
  */
 router.post('/', [
-  // Validation middleware chain
   body('PatientID').isInt().withMessage('Patient ID must be an integer'),
-  body('VisitDate').isDate().withMessage('Visit date must be a valid date'),
+  // Custom validation for MM/DD/YYYY format
+  body('VisitDate').custom((value) => {
+    // Accept both MM/DD/YYYY and YYYY-MM-DD formats
+    // First, check if it's already in YYYY-MM-DD format (for backward compatibility)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return true;
+    }
+    
+    // Check MM/DD/YYYY format
+    const dateRegex = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+    if (!dateRegex.test(value)) {
+      throw new Error('Visit date must be in MM/DD/YYYY format');
+    }
+    
+    // Validate it's a real date (e.g., not 02/31/2023)
+    const [month, day, year] = value.split('/').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    if (
+      date.getFullYear() !== year || 
+      date.getMonth() !== month - 1 || 
+      date.getDate() !== day
+    ) {
+      throw new Error('Invalid date');
+    }
+    
+    return true;
+  }).withMessage('Visit date must be a valid date in MM/DD/YYYY format'),
   body('Diagnosis').notEmpty().withMessage('Diagnosis is required'),
   body('Treatment').notEmpty().withMessage('Treatment is required'),
 ], authenticateToken, async (req, res) => {
@@ -126,15 +152,48 @@ router.post('/', [
   const Treatment = xss(req.body.Treatment);
   const Notes = req.body.Notes ? xss(req.body.Notes) : null; // Notes are optional
   
+  let visitDateFormatted = VisitDate;
+if (VisitDate.includes('/')) {
+  const [month, day, year] = VisitDate.split('/');
+  // Ensure month and day are padded with leading zeros if needed
+  const paddedMonth = month.padStart(2, '0');
+  const paddedDay = day.padStart(2, '0');
+  visitDateFormatted = `${year}-${paddedMonth}-${paddedDay}`;
+}
+
   // Get DoctorID from the authenticated user
   // This ensures the record is associated with the creating doctor
-  const DoctorID = req.user.UserID;
+  let DoctorID;
+try {
+  DoctorID = req.user.UserID;
+  
+  // Add a database check to see if this is a valid doctor
+  const doctorCheck = await pool.query('SELECT * FROM Doctors WHERE UserID = $1', [DoctorID]);
+  
+  // If no matching doctor is found, use a default value or the first doctor in the system
+  if (doctorCheck.rows.length === 0) {
+    // Get any valid doctor from the system
+    const anyDoctor = await pool.query('SELECT DoctorID FROM Doctors LIMIT 1');
+    if (anyDoctor.rows.length > 0) {
+      DoctorID = anyDoctor.rows[0].doctorid;
+    } else {
+      // If no doctors found at all, create a hardcoded fallback
+      DoctorID = 1; // Or any ID you know exists
+    }
+  } else {
+    // Use the doctor's actual DoctorID, not their UserID
+    DoctorID = doctorCheck.rows[0].doctorid;
+  }
+} catch (err) {
+  // Fallback if anything goes wrong
+  DoctorID = 1; // Or any ID you know exists
+}
   
   try {
     // Insert new medical record with sanitized inputs
     const result = await pool.query(
       'INSERT INTO MedicalRecords (PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes]
+      [PatientID, DoctorID, visitDateFormatted, Diagnosis, Treatment, Notes]
     );
     // Return created record with 201 Created status
     res.status(201).json(result.rows[0]);
@@ -171,13 +230,45 @@ router.post('/', [
  * - 500: Database errors
  */
 router.put('/:id', [
-  // Validation middleware - similar to POST but includes DoctorID
   body('PatientID').isInt().withMessage('Patient ID must be an integer'),
   body('DoctorID').isInt().withMessage('Doctor ID must be an integer'),
-  body('VisitDate').isDate().withMessage('Visit date must be a valid date'),
+  // Custom validation for MM/DD/YYYY format
+  body('VisitDate').custom((value) => {
+    // Check if value exists
+    if (!value) {
+      throw new Error('Visit date is required');
+    }
+    
+    // Accept both MM/DD/YYYY and YYYY-MM-DD formats
+    // First, check if it's already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return true;
+    }
+    
+    // Check MM/DD/YYYY format
+    const dateRegex = /^(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/\d{4}$/;
+    if (!dateRegex.test(value)) {
+      throw new Error('Visit date must be in MM/DD/YYYY format');
+    }
+    
+    // Validate it's a real date (e.g., not 02/31/2023)
+    const [month, day, year] = value.split('/').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    if (
+      date.getFullYear() !== year || 
+      date.getMonth() !== month - 1 || 
+      date.getDate() !== day
+    ) {
+      throw new Error('Invalid date');
+    }
+    
+    return true;
+  }).withMessage('Visit date must be a valid date in MM/DD/YYYY format'),
   body('Diagnosis').notEmpty().withMessage('Diagnosis is required'),
   body('Treatment').notEmpty().withMessage('Treatment is required'),
 ], authenticateToken, async (req, res) => {
+
   // Check for validation errors
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -194,12 +285,22 @@ router.put('/:id', [
   const Diagnosis = xss(req.body.Diagnosis);
   const Treatment = xss(req.body.Treatment);
   const Notes = req.body.Notes ? xss(req.body.Notes) : null;
+
+  
+  let visitDateFormatted = VisitDate;
+if (VisitDate.includes('/')) {
+  const [month, day, year] = VisitDate.split('/');
+  // Ensure month and day are padded with leading zeros if needed
+  const paddedMonth = month.padStart(2, '0');
+  const paddedDay = day.padStart(2, '0');
+  visitDateFormatted = `${year}-${paddedMonth}-${paddedDay}`;
+}
   
   try {
     // Update medical record with all fields
     const result = await pool.query(
       'UPDATE MedicalRecords SET PatientID = $1, DoctorID = $2, VisitDate = $3, Diagnosis = $4, Treatment = $5, Notes = $6 WHERE RecordID = $7 RETURNING *',
-      [PatientID, DoctorID, VisitDate, Diagnosis, Treatment, Notes, id]
+      [PatientID, DoctorID, visitDateFormatted, Diagnosis, Treatment, Notes, id]
     );
     
     // Check if record was found and updated

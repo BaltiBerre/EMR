@@ -15,7 +15,7 @@ function PatientDetails({ patient, onBack, userRole }) {
     diagnosis: '',
     treatment: '',
     notes: '',
-    visitdate: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
+    visitdate: new Date().toLocaleDateString('en-US') // Returns MM/DD/YYYY format
   });
   const [assignedDoctor, setAssignedDoctor] = useState(null);
   
@@ -98,9 +98,24 @@ function PatientDetails({ patient, onBack, userRole }) {
     console.log('[DEBUG] Patient ID:', patient.patientid);
     
     try {
+      // Parse the MM/DD/YYYY format to a Date object, then convert to YYYY-MM-DD
+      const dateParts = newRecord.visitdate.split('/');
+      // Handle both MM/DD/YYYY format and already converted YYYY-MM-DD format
+      let formattedDate;
+      if (dateParts.length === 3) {
+        // If it's in MM/DD/YYYY format
+        const month = dateParts[0].padStart(2, '0');
+        const day = dateParts[1].padStart(2, '0');
+        const year = dateParts[2];
+        formattedDate = `${year}-${month}-${day}`;
+      } else {
+        // If it's already in YYYY-MM-DD format
+        formattedDate = newRecord.visitdate;
+      }
+      
       console.log('[DEBUG] Preparing to add medical record with data:', {
         PatientID: patient.patientid,
-        VisitDate: newRecord.visitdate,
+        VisitDate: formattedDate, // Use the converted date format
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
         Notes: newRecord.notes
@@ -108,7 +123,7 @@ function PatientDetails({ patient, onBack, userRole }) {
       
       const response = await axios.post(`${API_URL}/api/medical-records`, {
         PatientID: patient.patientid,
-        VisitDate: newRecord.visitdate,
+        VisitDate: formattedDate, // Use the converted date format
         Diagnosis: newRecord.diagnosis,
         Treatment: newRecord.treatment,
         Notes: newRecord.notes
@@ -123,13 +138,14 @@ function PatientDetails({ patient, onBack, userRole }) {
         diagnosis: '',
         treatment: '',
         notes: '',
-        visitdate: new Date().toISOString().split('T')[0]
+        visitdate: new Date().toLocaleDateString('en-US') // Reset to MM/DD/YYYY
       });
       setShowAddRecordForm(false);
       // Go to first page to see the new record
       setCurrentPage(1);
       fetchMedicalRecords(1);
     } catch (err) {
+      // Error handling remains the same
       console.error('[ERROR] Adding medical record failed:', err);
       console.error('[ERROR] Error response:', err.response?.data || 'No response data');
       console.error('[ERROR] Error status:', err.response?.status);
@@ -141,7 +157,6 @@ function PatientDetails({ patient, onBack, userRole }) {
         Notes: newRecord.notes
       });
       
-      // Set more descriptive error message based on the error type
       if (err.response?.status === 403) {
         setError('Permission denied. Only doctors can add medical records.');
       } else if (err.response?.status === 400) {
@@ -153,13 +168,15 @@ function PatientDetails({ patient, onBack, userRole }) {
   };
   
   
+  
+  
   const handleEditRecord = (record) => {
     setEditingRecordId(record.recordid);
     setNewRecord({
       diagnosis: record.diagnosis,
       treatment: record.treatment,
       notes: record.notes || '',
-      visitdate: new Date(record.visitdate).toISOString().split('T')[0]
+      visitdate: new Date(record.visitdate).toLocaleDateString('en-US')
     });
   };
   

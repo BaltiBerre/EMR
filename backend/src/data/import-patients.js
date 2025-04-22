@@ -3,6 +3,26 @@ const path = require('path');
 
 // Here's what this file does
 
+// connects to the database using environment variables
+// Reads all .json files from a fhir folder
+// for each file looks for patient entries ( resourceType === 'Patient' )
+// For each patient: 
+//    extracts name gender birth email phone and address
+//    creates a user account for them in the database
+//    adds patient record to the patients table and links it to their account
+// also handles errors and database transactions
+// closes connection at the end
+
+// this file was only really meant to be a one-time thing as i just needed to import all the patients that I downloaded from the 
+// synthesised database.
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+});
 
 
 
