@@ -29,5 +29,4 @@ module.exports = {
   pool,
   query: (text, params) => pool.query(text, params),
   testConnection,
-  initializeTables
 };
